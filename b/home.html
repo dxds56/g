@@ -1,0 +1,3338 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+    <meta name="theme-color" content="#f5f5f5" id="themeMeta">
+    <title>自定义主页</title>
+    <style>
+        /* ===== 全局重置 ===== */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        html,
+        body {
+            height: 100%;
+        }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "PingFang SC", "Microsoft YaHei", sans-serif;
+            background: #f5f5f5;
+            color: #333;
+            -webkit-tap-highlight-color: transparent;
+            transition: background 0.3s, color 0.3s;
+        }
+        :root {
+            --accent-color: #4a90d9;
+            --bg: #f5f5f5;
+            --card-bg: rgba(255, 255, 255, 0.6);
+            --text: #333;
+            --text-secondary: #999;
+            --border: rgba(255, 255, 255, 0.5);
+            --shadow: 0 2px 12px rgba(0, 0, 0, 0.06);
+            --search-radius: 28px;
+            --search-border-type: solid;
+            --search-border-color: rgba(255, 255, 255, 0.8);
+            --icon-size: 36px;
+            --text-size: 11px;
+            --bookmark-text-color: #333;
+            --text-stroke-color: rgba(255, 255, 255, 0.9);
+            --text-shadow-color: rgba(0, 0, 0, 0.6);
+        }
+        body.dark {
+            --bg: #1a1a2e;
+            --card-bg: rgba(37, 37, 64, 0.6);
+            --text: #e0e0e0;
+            --text-secondary: #999;
+            --border: rgba(255, 255, 255, 0.1);
+            --shadow: 0 2px 12px rgba(0, 0, 0, 0.3);
+            --bookmark-text-color: #e0e0e0;
+            --text-stroke-color: rgba(0, 0, 0, 0.9);
+            --text-shadow-color: rgba(255, 255, 255, 0.4);
+            background: var(--bg);
+            color: var(--text);
+        }
+        .page-scroll {
+            width: 100%;
+            height: 100%;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 20px;
+        }
+        .bg-layer {
+            position: fixed;
+            inset: 0;
+            z-index: -2;
+            background-size: cover;
+            background-position: center;
+            background-repeat: no-repeat;
+            pointer-events: none;
+            display: none;
+        }
+        .bg-layer.visible {
+            display: block;
+        }
+        .bg-layer::after {
+            content: '';
+            position: absolute;
+            inset: 0;
+            background: rgba(0, 0, 0, 0.15);
+            pointer-events: none;
+        }
+        body.dark .bg-layer::after {
+            background: rgba(0, 0, 0, 0.45);
+        }
+        .container {
+            width: 100%;
+            max-width: 480px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 24px;
+            padding-top: max(10px, 20vh);
+            flex: 1 0 auto;
+            transition: margin-top 0.2s;
+        }
+        /* ===== 时钟🔴 ===== */
+        .clock-section {
+            text-align: center;
+            transition: opacity 0.25s, transform 0.25s;
+        }
+        .clock-section.hidden {
+            opacity: 0;
+            transform: scale(0.96);
+            pointer-events: none;
+            height: 0;
+            overflow: hidden;
+            margin: 0;
+            padding: 0;
+        }
+        .time {
+            font-size: 56px;
+            font-weight: 200;
+            letter-spacing: 2px;
+            line-height: 1;
+            color: rgba(255, 255, 255, 0.7);
+            text-shadow: 0 2px 20px rgba(0, 0, 0, 0.6), 0 0 5px rgba(0, 0, 0, 0.4);
+        }
+        .date {
+            font-size: 14px;
+            margin-top: 8px;
+            letter-spacing: 1px;
+            color: rgba(255, 255, 255, 0.7);
+            text-shadow: 0 2px 15px rgba(0, 0, 0, 0.6), 0 0 5px rgba(0, 0, 0, 0.3);
+        }
+        /* ===== 搜索框 ===== */
+        .search-wrapper {
+            width: 100%;
+            position: relative;
+        }
+        .search-box {
+            width: 100%;
+            padding: 14px 48px 14px 80px;
+            font-size: 16px;
+            border: 2px solid var(--border);
+            border-radius: var(--search-radius);
+            border-style: var(--search-border-type);
+            background: var(--card-bg);
+            color: #fff;
+            outline: none;
+            transition: all 0.2s;
+            box-shadow: var(--shadow);
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+        }
+        .search-box:focus {
+            border-color: var(--accent-color);
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.12);
+        }
+        .search-box::placeholder {
+            color: rgba(255, 255, 255, 0.6);
+        }
+        .search-engine-btn {
+            position: absolute;
+            left: 8px;
+            top: 50%;
+            transform: translateY(-50%);
+            background: var(--border);
+            border: none;
+            color: #fff;
+            font-size: 13px;
+            padding: 6px 12px;
+            border-radius: 18px;
+            cursor: pointer;
+            transition: all 0.2s;
+            z-index: 2;
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+        }
+        .search-engine-btn:hover {
+            background: var(--accent-color);
+        }
+        .search-engine-btn:active {
+            transform: scale(0.95);
+        }
+        .search-clear {
+            position: absolute;
+            right: 10px;
+            top: 50%;
+            transform: translateY(-50%);
+            background: none;
+            border: none;
+            color: rgba(255, 255, 255, 0.6);
+            font-size: 18px;
+            cursor: pointer;
+            width: 30px;
+            height: 30px;
+            border-radius: 50%;
+            display: none;
+            justify-content: center;
+            align-items: center;
+        }
+        .search-clear.visible {
+            display: flex;
+        }
+        .engine-dropdown {
+            position: absolute;
+            left: 8px;
+            top: 52px;
+            background: var(--card-bg);
+            border: 2px solid var(--border);
+            border-radius: 14px;
+            box-shadow: var(--shadow);
+            overflow: hidden;
+            z-index: 10;
+            display: none;
+            min-width: 120px;
+            max-height: 200px;
+            overflow-y: auto;
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+        }
+        .engine-dropdown.show {
+            display: block;
+        }
+        .engine-option {
+            padding: 11px 16px;
+            cursor: pointer;
+            font-size: 14px;
+            transition: background 0.15s;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .engine-option:hover {
+            background: var(--border);
+        }
+        .engine-option.active {
+            color: var(--accent-color);
+            font-weight: 600;
+            background: rgba(74, 144, 217, 0.1);
+        }
+        .history-dropdown {
+            position: absolute;
+            left: 0;
+            top: 52px;
+            width: 100%;
+            background: var(--card-bg);
+            border: 2px solid var(--border);
+            border-radius: 14px;
+            box-shadow: var(--shadow);
+            overflow: hidden;
+            z-index: 10;
+            display: none;
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+            padding: 4px 0;
+        }
+        .history-dropdown.show {
+            display: block;
+        }
+        .history-item {
+            padding: 10px 16px;
+            cursor: pointer;
+            font-size: 14px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            transition: background 0.15s;
+            color: var(--text);
+        }
+        .history-item:hover {
+            background: var(--border);
+        }
+        .history-item .h-text {
+            flex: 1;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+        .history-item .h-del {
+            background: none;
+            border: none;
+            color: var(--text-secondary);
+            font-size: 14px;
+            cursor: pointer;
+            padding: 0 4px;
+        }
+        .history-item .h-del:hover {
+            color: var(--danger);
+        }
+        .history-clear {
+            padding: 8px 16px;
+            text-align: center;
+            border-top: 1px solid var(--border);
+            cursor: pointer;
+            font-size: 12px;
+            color: var(--text-secondary);
+            transition: background 0.15s;
+        }
+        .history-clear:hover {
+            background: var(--border);
+        }
+        .history-empty {
+            padding: 16px;
+            text-align: center;
+            font-size: 13px;
+            color: var(--text-secondary);
+        }
+        /* ===== 书签网格 ===== */
+        .shortcuts {
+            width: 100%;
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 14px;
+            margin-top: 16px;
+        }
+        .shortcut-item {
+            position: relative;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 6px;
+            cursor: grab;
+            padding: 12px 4px;
+            border-radius: 14px;
+            background: transparent !important;
+            box-shadow: none !important;
+            transition: all 0.2s;
+            text-decoration: none;
+            color: var(--text);
+            min-width: 0;
+        }
+        .shortcut-item:hover {
+            transform: translateY(-2px);
+        }
+        .shortcut-item:active {
+            transform: scale(0.95);
+        }
+        .shortcut-icon {
+            width: var(--icon-size);
+            height: var(--icon-size);
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: calc(var(--icon-size) / 2.2);
+            color: #fff;
+            font-weight: 700;
+            background: transparent !important;
+            flex-shrink: 0;
+            transition: all 0.2s;
+            overflow: hidden;
+            position: relative;
+        }
+        .shortcut-icon .icon-fallback {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            width: 100%;
+            height: 100%;
+            font-weight: 700;
+            color: var(--text);
+            text-shadow: -1px -1px 0 var(--text-stroke-color), 1px -1px 0 var(--text-stroke-color), -1px 1px 0 var(--text-stroke-color), 1px 1px 0 var(--text-stroke-color), 0 0 8px var(--text-shadow-color);
+        }
+        .shortcut-name {
+            font-size: var(--text-size);
+            text-align: center;
+            color: var(--bookmark-text-color);
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            max-width: 100%;
+            text-shadow: -1px -1px 0 var(--text-stroke-color), 1px -1px 0 var(--text-stroke-color), -1px 1px 0 var(--text-stroke-color), 1px 1px 0 var(--text-stroke-color);
+        }
+        .shortcut-item .delete-btn,
+        .shortcut-item .edit-btn,
+        .shortcut-item .move-up-btn,
+        .shortcut-item .move-down-btn {
+            position: absolute;
+            width: 18px;
+            height: 18px;
+            border-radius: 50%;
+            display: none;
+            align-items: center;
+            justify-content: center;
+            z-index: 10;
+            box-shadow: 0 2px 6px rgba(0, 0, 0, 0.3);
+            cursor: pointer;
+            border: none;
+            padding: 0;
+            line-height: 1;
+            font-size: 11px;
+            color: #fff;
+        }
+        .shortcut-item .delete-btn {
+            top: -8px;
+            right: -8px;
+            background: #e05555;
+        }
+        .shortcut-item .edit-btn {
+            top: 14px;
+            right: -8px;
+            background: #4a90d9;
+        }
+        .shortcut-item .move-up-btn {
+            bottom: 14px;
+            right: -8px;
+            background: #f0ad4e;
+            font-size: 12px;
+        }
+        .shortcut-item .move-down-btn {
+            bottom: -6px;
+            right: -8px;
+            background: #f0ad4e;
+            font-size: 12px;
+        }
+        .shortcut-item.deleting .delete-btn,
+        .shortcut-item.deleting .edit-btn,
+        .shortcut-item.deleting .move-up-btn,
+        .shortcut-item.deleting .move-down-btn {
+            display: flex;
+        }
+        .sc-empty {
+            grid-column: 1/-1;
+            padding: 30px 12px;
+            text-align: center;
+            color: var(--text-secondary);
+            font-size: 13px;
+            border: 2px dashed var(--border);
+            border-radius: 16px;
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+        }
+        /* ===== 右下角浮动按钮组 ===== */
+        .fab-group {
+            position: fixed;
+            right: 16px;
+            bottom: 24px;
+            z-index: 60;
+            display: flex;
+            gap: 10px;
+            align-items: center;
+            transition: opacity 0.25s, transform 0.25s;
+        }
+        .fab-group.hidden {
+            opacity: 0;
+            transform: scale(0.8);
+            pointer-events: none;
+        }
+        .fab-btn {
+            width: 46px;
+            height: 46px;
+            border-radius: 12px;
+            border: none;
+            background: var(--card-bg);
+            color: var(--text);
+            cursor: pointer;
+            box-shadow: var(--shadow);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.2s;
+            font-size: 20px;
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+        }
+        .fab-btn:active {
+            transform: scale(0.92);
+        }
+        .fab-btn.run {
+            background: var(--accent-color);
+            color: #fff;
+            font-size: 14px;
+            font-weight: bold;
+            letter-spacing: 0.5px;
+        }
+        .fab-btn.run:disabled {
+            opacity: 0.4;
+            cursor: not-allowed;
+            transform: none;
+        }
+        /* ★ 小竖线按钮（全透明） */
+        .fab-btn.tiny-pipe {
+            width: 28px;
+            height: 28px;
+            font-size: 18px;
+            line-height: 1;
+            background: transparent !important;
+            color: #ffffff;
+            border-radius: 50%;
+            padding: 0;
+            display: none;
+            align-items: center;
+            justify-content: center;
+            box-shadow: none;
+            position: fixed;
+            right: 16px;
+            bottom: 24px;
+            z-index: 61;
+            cursor: pointer;
+            border: none;
+            font-weight: 300;
+            transition: all 0.2s;
+            text-shadow: 0 0 4px rgba(0,0,0,0.5);
+        }
+        .fab-btn.tiny-pipe:active {
+            transform: scale(0.9);
+        }
+        .fab-btn.tiny-pipe.show {
+            display: flex;
+        }
+        /* ===== 设置面板 ===== */
+        .settings-overlay {
+            position: fixed;
+            inset: 0;
+            background: rgba(0, 0, 0, 0.35);
+            z-index: 110;
+            display: flex;
+            align-items: flex-end;
+            justify-content: center;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.25s;
+        }
+        .settings-overlay.active {
+            opacity: 1;
+            pointer-events: auto;
+        }
+        .settings-sheet {
+            width: 100%;
+            max-width: 480px;
+            background: var(--card-bg);
+            color: var(--text);
+            border-radius: 20px 20px 0 0;
+            padding: 20px 20px 32px;
+            transform: translateY(100%);
+            transition: transform 0.3s cubic-bezier(0.32, 0.72, 0, 1);
+            max-height: 80vh;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+            gap: 18px;
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+        }
+        .settings-overlay.active .settings-sheet {
+            transform: translateY(0);
+        }
+        .modal-handle {
+            width: 36px;
+            height: 4px;
+            background: var(--border);
+            border-radius: 2px;
+            align-self: center;
+            margin-bottom: 4px;
+        }
+        .modal-title {
+            font-size: 17px;
+            font-weight: 600;
+            text-align: center;
+        }
+        .setting-section-title {
+            font-size: 13px;
+            font-weight: 600;
+            color: var(--text-secondary);
+            margin-bottom: 8px;
+            letter-spacing: 1px;
+        }
+        .setting-block {
+            padding: 12px;
+            background: var(--bg);
+            border-radius: 14px;
+            border: 2px solid var(--border);
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+        .setting-row {
+            display: flex;
+            gap: 8px;
+            flex-wrap: wrap;
+            align-items: center;
+        }
+        .setting-btn {
+            flex: 1;
+            min-width: 60px;
+            padding: 10px 0;
+            border-radius: 12px;
+            border: 2px solid var(--border);
+            background: var(--card-bg);
+            color: var(--text);
+            font-size: 13px;
+            cursor: pointer;
+            text-align: center;
+            transition: all 0.2s;
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+        }
+        .setting-btn:active {
+            transform: scale(0.95);
+        }
+        .setting-btn.primary {
+            border-color: var(--accent-color);
+            color: var(--accent-color);
+        }
+        .setting-btn.danger {
+            color: #e05555;
+            border-color: #ffd4d4;
+        }
+        .setting-btn.primary.fill {
+            background: var(--accent-color);
+            color: #fff;
+        }
+        .setting-row input[type="text"],
+        .setting-row input[type="color"],
+        .setting-row select {
+            flex: 1;
+            padding: 8px 12px;
+            border-radius: 10px;
+            border: 2px solid var(--border);
+            background: var(--card-bg);
+            color: var(--text);
+            font-size: 14px;
+            outline: none;
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+        }
+        .setting-row input:focus,
+        .setting-row select:focus {
+            border-color: var(--accent-color);
+        }
+        .setting-row input[type="range"] {
+            flex: 1;
+            -webkit-appearance: none;
+            height: 4px;
+            border-radius: 2px;
+            background: var(--border);
+            outline: none;
+            cursor: pointer;
+        }
+        .setting-row input[type="range"]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            width: 18px;
+            height: 18px;
+            border-radius: 50%;
+            background: var(--accent-color);
+            border: 2px solid #fff;
+            cursor: pointer;
+        }
+        .layout-val {
+            min-width: 40px;
+            text-align: right;
+            color: var(--accent-color);
+            font-weight: 600;
+            font-size: 12px;
+        }
+        .custom-search-field {
+            display: flex;
+            gap: 6px;
+            flex-wrap: wrap;
+            align-items: center;
+        }
+        .custom-search-field input {
+            flex: 1;
+            min-width: 80px;
+            padding: 6px 10px;
+            border-radius: 8px;
+            border: 2px solid var(--border);
+            background: var(--card-bg);
+            color: var(--text);
+            font-size: 13px;
+            outline: none;
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+        }
+        .custom-search-field input:focus {
+            border-color: var(--accent-color);
+        }
+        .custom-search-field button {
+            padding: 6px 14px;
+            border-radius: 8px;
+            border: none;
+            background: var(--accent-color);
+            color: #fff;
+            font-size: 13px;
+            cursor: pointer;
+        }
+        .script-manager-view {
+            display: none;
+        }
+        .script-manager-view.active {
+            display: flex;
+            flex-direction: column;
+            gap: 14px;
+        }
+        .back-btn {
+            background: none;
+            border: none;
+            color: var(--accent-color);
+            font-size: 14px;
+            cursor: pointer;
+            align-self: flex-start;
+            margin-bottom: 8px;
+            font-weight: 600;
+        }
+        .script-list-item {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 10px 12px;
+            background: var(--card-bg);
+            border-radius: 12px;
+            border: 1px solid var(--border);
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+        }
+        .script-list-item input[type="checkbox"] {
+            width: 18px;
+            height: 18px;
+            cursor: pointer;
+        }
+        .script-list-item .sname {
+            flex: 1;
+            font-size: 14px;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+        .script-list-item .sdel {
+            background: #ffd4d4;
+            border: none;
+            border-radius: 8px;
+            padding: 4px 10px;
+            color: #e05555;
+            font-size: 12px;
+            cursor: pointer;
+        }
+        .script-edit-area {
+            display: none;
+            flex-direction: column;
+            gap: 8px;
+            background: var(--card-bg);
+            padding: 12px;
+            border-radius: 12px;
+            border: 1px solid var(--border);
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+        }
+        .script-edit-area.active {
+            display: flex;
+        }
+        .script-edit-area input {
+            width: 100%;
+            padding: 8px 12px;
+            border: 2px solid var(--border);
+            border-radius: 10px;
+            font-size: 14px;
+            background: var(--card-bg);
+            color: var(--text);
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+        }
+        .script-edit-area textarea {
+            width: 100%;
+            height: 120px;
+            padding: 8px 12px;
+            font-family: monospace;
+            font-size: 13px;
+            border: 2px solid var(--border);
+            border-radius: 10px;
+            background: var(--card-bg);
+            color: var(--text);
+            resize: vertical;
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+        }
+        .script-actions {
+            display: flex;
+            gap: 8px;
+        }
+        .script-actions .sbtn {
+            flex: 1;
+            padding: 8px 0;
+            border: none;
+            border-radius: 10px;
+            font-size: 13px;
+            font-weight: 600;
+            cursor: pointer;
+        }
+        .sbtn.save {
+            background: var(--accent-color);
+            color: #fff;
+        }
+        .sbtn.cancel {
+            background: var(--border);
+            color: var(--text-secondary);
+        }
+        .footer {
+            text-align: center;
+            padding: 16px 12px;
+            font-size: 12px;
+            color: var(--text-secondary);
+            letter-spacing: 2px;
+            opacity: 0.7;
+            width: 100%;
+            max-width: 480px;
+            flex-shrink: 0;
+        }
+        .toast {
+            position: fixed;
+            bottom: 80px;
+            left: 50%;
+            transform: translateX(-50%) translateY(20px);
+            background: #333;
+            color: #fff;
+            padding: 10px 20px;
+            border-radius: 20px;
+            font-size: 13px;
+            z-index: 200;
+            opacity: 0;
+            pointer-events: none;
+            transition: all 0.3s;
+            white-space: nowrap;
+        }
+        .toast.show {
+            opacity: 1;
+            transform: translateX(-50%) translateY(0);
+        }
+        .modal-overlay {
+            position: fixed;
+            inset: 0;
+            background: rgba(0, 0, 0, 0.35);
+            z-index: 100;
+            display: flex;
+            align-items: flex-end;
+            justify-content: center;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.25s;
+        }
+        .modal-overlay.active {
+            opacity: 1;
+            pointer-events: auto;
+        }
+        .modal-sheet {
+            width: 100%;
+            max-width: 480px;
+            background: var(--card-bg);
+            border-radius: 20px 20px 0 0;
+            padding: 24px 20px 32px;
+            transform: translateY(100%);
+            transition: transform 0.3s cubic-bezier(0.32, 0.72, 0, 1);
+            display: flex;
+            flex-direction: column;
+            gap: 18px;
+            max-height: 85vh;
+            overflow-y: auto;
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+        }
+        .modal-overlay.active .modal-sheet {
+            transform: translateY(0);
+        }
+        .modal-field {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+        }
+        .modal-label {
+            font-size: 12px;
+            color: var(--text-secondary);
+            letter-spacing: 1px;
+        }
+        .modal-input {
+            width: 100%;
+            padding: 12px 16px;
+            font-size: 15px;
+            border: 2px solid var(--border);
+            border-radius: 14px;
+            background: var(--card-bg);
+            color: var(--text);
+            outline: none;
+            transition: border 0.2s;
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+        }
+        .modal-input:focus {
+            border-color: var(--accent-color);
+        }
+        .modal-actions {
+            display: flex;
+            gap: 12px;
+            margin-top: 4px;
+        }
+        .modal-btn {
+            flex: 1;
+            padding: 13px;
+            border-radius: 14px;
+            font-size: 15px;
+            font-weight: 600;
+            cursor: pointer;
+            border: none;
+            transition: all 0.2s;
+        }
+        .modal-btn:active {
+            transform: scale(0.96);
+        }
+        .modal-btn.cancel {
+            background: var(--border);
+            color: var(--text-secondary);
+        }
+        .modal-btn.save {
+            background: var(--accent-color);
+            color: #fff;
+            flex: 2;
+        }
+        .modal-btn.delete {
+            background: #ffd4d4;
+            color: #e05555;
+            font-size: 13px;
+            padding: 10px;
+            border-radius: 12px;
+            width: 100%;
+            margin-top: -6px;
+            display: none;
+        }
+        /* ===== 书签库面板 ===== */
+        .lib-overlay {
+            position: fixed;
+            inset: 0;
+            background: rgba(0, 0, 0, 0.35);
+            z-index: 110;
+            display: flex;
+            align-items: flex-end;
+            justify-content: center;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.25s;
+        }
+        .lib-overlay.active {
+            opacity: 1;
+            pointer-events: auto;
+        }
+        .lib-sheet {
+            width: 100%;
+            max-width: 480px;
+            background: var(--card-bg);
+            color: var(--text);
+            border-radius: 20px 20px 0 0;
+            padding: 20px 20px 32px;
+            transform: translateY(100%);
+            transition: transform 0.3s cubic-bezier(0.32, 0.72, 0, 1);
+            max-height: 90vh;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+        }
+        .lib-overlay.active .lib-sheet {
+            transform: translateY(0);
+        }
+        .lib-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding-bottom: 6px;
+            border-bottom: 1px solid var(--border);
+            flex-shrink: 0;
+        }
+        .lib-header span {
+            font-size: 18px;
+            font-weight: 600;
+        }
+        .lib-header .close-btn {
+            background: none;
+            border: none;
+            font-size: 16px;
+            color: var(--text-secondary);
+            cursor: pointer;
+            padding: 0 8px;
+        }
+        /* ★ 书签库输入行：清除按钮在右下角 */
+        .lib-parse-row {
+            display: flex;
+            gap: 8px;
+            align-items: center;
+            flex-shrink: 0;
+            position: relative;
+        }
+        .lib-parse-row textarea {
+            flex: 1;
+            padding: 6px 30px 6px 10px;  /* 右侧留空给按钮 */
+            border: 2px solid var(--border);
+            border-radius: 10px;
+            background: var(--card-bg);
+            color: var(--text);
+            font-size: 13px;
+            resize: vertical;
+            height: 50px;
+            min-height: 40px;
+            outline: none;
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+        }
+        .lib-parse-row textarea:focus {
+            border-color: var(--accent-color);
+        }
+        /* 清除按钮 - 位于 textarea 内部右下角 */
+        .lib-parse-row .clear-filter-btn {
+            position: absolute;
+            right: 56px;  /* 在解析按钮左侧，但为了放在右下角，调整 bottom 和 right */
+            bottom: 6px;  /* 紧贴底部 */
+            background: none;
+            border: none;
+            color: var(--text-secondary);
+            font-size: 16px;
+            cursor: pointer;
+            padding: 2px 4px;
+            display: none;  /* 默认隐藏 */
+            z-index: 2;
+            line-height: 1;
+        }
+        .lib-parse-row .clear-filter-btn.visible {
+            display: block;
+        }
+        .lib-parse-row button {
+            padding: 0 16px;
+            height: 48px;
+            border: none;
+            border-radius: 10px;
+            background: var(--accent-color);
+            color: #fff;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            white-space: nowrap;
+            flex-shrink: 0;
+        }
+        .lib-parse-row button:active {
+            transform: scale(0.95);
+        }
+        .lib-list-area {
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+            flex: 1;
+            overflow-y: auto;
+            padding: 4px 0;
+            min-height: 200px;
+        }
+        .lib-empty {
+            text-align: center;
+            padding: 20px;
+            color: var(--text-secondary);
+            font-size: 14px;
+        }
+        .lib-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 4px 8px;
+            background: var(--bg);
+            border-radius: 6px;
+            border: 1px solid var(--border);
+        }
+        .lib-row .lib-info {
+            display: flex;
+            flex-direction: column;
+            flex: 1;
+            min-width: 0;
+            margin-right: 6px;
+            cursor: pointer;
+        }
+        .lib-row .lib-info:active {
+            opacity: 0.6;
+        }
+        .lib-row .lib-name {
+            font-size: 13px;
+            font-weight: 600;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+        .lib-row .lib-url {
+            font-size: 10px;
+            color: var(--text-secondary);
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+        .lib-row .lib-actions {
+            display: flex;
+            gap: 2px;
+            flex-shrink: 0;
+        }
+        .lib-row .lib-actions button {
+            border: none;
+            border-radius: 6px;
+            padding: 2px 6px;
+            font-size: 11px;
+            cursor: pointer;
+            transition: 0.2s;
+        }
+        .lib-row .lib-actions button:active {
+            transform: scale(0.95);
+        }
+        .lib-row .lib-actions .btn-add {
+            background: var(--accent-color);
+            color: #fff;
+        }
+        .lib-row .lib-actions .btn-edit {
+            background: #f0ad4e;
+            color: #fff;
+        }
+        .lib-row .lib-actions .btn-del {
+            background: #ffd4d4;
+            color: #e05555;
+        }
+        .lib-batch-row {
+            margin-top: 2px;
+            padding-top: 8px;
+            border-top: 1px solid var(--border);
+            display: flex;
+            gap: 8px;
+            flex-shrink: 0;
+        }
+        .lib-batch-row button {
+            flex: 1;
+            padding: 10px 0;
+            border: none;
+            border-radius: 12px;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: 0.2s;
+        }
+        .lib-batch-row button:active {
+            transform: scale(0.95);
+        }
+        .lib-batch-row .batch-btn {
+            background: var(--accent-color);
+            color: #fff;
+        }
+        .lib-batch-row .batch-btn.disabled {
+            opacity: 0.5;
+            cursor: default;
+        }
+        .lib-batch-row .batch-btn.outline {
+            background: transparent;
+            border: 2px solid var(--accent-color);
+            color: var(--accent-color);
+        }
+        /* ===== 重置菜单 ===== */
+        .reset-overlay {
+            position: fixed;
+            inset: 0;
+            background: rgba(0, 0, 0, 0.35);
+            z-index: 130;
+            display: flex;
+            align-items: flex-end;
+            justify-content: center;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.25s;
+        }
+        .reset-overlay.active {
+            opacity: 1;
+            pointer-events: auto;
+        }
+        .reset-sheet {
+            width: 100%;
+            max-width: 480px;
+            background: var(--card-bg);
+            color: var(--text);
+            border-radius: 20px 20px 0 0;
+            padding: 20px 20px 32px;
+            transform: translateY(100%);
+            transition: transform 0.3s cubic-bezier(0.32, 0.72, 0, 1);
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+        }
+        .reset-overlay.active .reset-sheet {
+            transform: translateY(0);
+        }
+        .reset-option {
+            padding: 14px 16px;
+            border-radius: 12px;
+            background: var(--bg);
+            border: 2px solid var(--border);
+            cursor: pointer;
+            font-size: 15px;
+            font-weight: 500;
+            transition: 0.2s;
+            text-align: center;
+        }
+        .reset-option:hover {
+            border-color: var(--accent-color);
+        }
+        .reset-option.danger {
+            color: #e05555;
+            border-color: #ffd4d4;
+        }
+        .reset-option.danger:hover {
+            background: #ffebee;
+        }
+        .reset-option.cancel-opt {
+            border-color: var(--border);
+            color: var(--text-secondary);
+        }
+        .reset-option.cancel-opt:hover {
+            background: var(--border);
+        }
+        /* ===== 修改弹窗 ===== */
+        .edit-overlay {
+            position: fixed;
+            inset: 0;
+            background: rgba(0, 0, 0, 0.35);
+            z-index: 120;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.25s;
+        }
+        .edit-overlay.active {
+            opacity: 1;
+            pointer-events: auto;
+        }
+        .edit-sheet {
+            width: 90%;
+            max-width: 400px;
+            background: var(--card-bg);
+            color: var(--text);
+            border-radius: 20px;
+            padding: 24px 20px 20px;
+            display: flex;
+            flex-direction: column;
+            gap: 14px;
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            transform: scale(0.95);
+            transition: transform 0.25s;
+        }
+        .edit-overlay.active .edit-sheet {
+            transform: scale(1);
+        }
+        .edit-title {
+            font-size: 17px;
+            font-weight: 600;
+            text-align: center;
+            margin-bottom: 4px;
+        }
+        .edit-field {
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+        }
+        .edit-field label {
+            font-size: 12px;
+            color: var(--text-secondary);
+        }
+        .edit-field input {
+            width: 100%;
+            padding: 10px 12px;
+            border: 2px solid var(--border);
+            border-radius: 10px;
+            background: var(--card-bg);
+            color: var(--text);
+            font-size: 14px;
+            outline: none;
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+        }
+        .edit-field input:focus {
+            border-color: var(--accent-color);
+        }
+        .edit-actions {
+            display: flex;
+            gap: 10px;
+            margin-top: 4px;
+        }
+        .edit-actions button {
+            flex: 1;
+            padding: 10px 0;
+            border: none;
+            border-radius: 10px;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: 0.2s;
+        }
+        .edit-actions button:active {
+            transform: scale(0.95);
+        }
+        .edit-actions .cancel {
+            background: var(--border);
+            color: var(--text-secondary);
+        }
+        .edit-actions .save {
+            background: var(--accent-color);
+            color: #fff;
+            flex: 2;
+        }
+        .batch-list-item {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 8px 12px;
+            background: var(--card-bg);
+            border-radius: 8px;
+            border: 1px solid var(--border);
+            margin-bottom: 4px;
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+        }
+        .batch-list-item input[type="checkbox"] {
+            width: 16px;
+            height: 16px;
+            cursor: pointer;
+        }
+        @media(max-width:400px) {
+            .shortcuts {
+                gap: 10px;
+            }
+            .shortcut-icon {
+                width: 32px;
+                height: 32px;
+                font-size: 14px;
+            }
+            .time {
+                font-size: 42px;
+            }
+            .search-box {
+                padding: 12px 36px 12px 72px;
+                font-size: 15px;
+            }
+            .fab-group {
+                gap: 6px;
+            }
+            .fab-btn {
+                width: 40px;
+                height: 40px;
+                font-size: 16px;
+            }
+        }
+        /* ===== 搜索面板 ===== */
+        .search-overlay {
+            position: fixed;
+            inset: 0;
+            background: rgba(0, 0, 0, 0.35);
+            z-index: 115;
+            display: flex;
+            align-items: flex-end;
+            justify-content: center;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.25s;
+        }
+        .search-overlay.active {
+            opacity: 1;
+            pointer-events: auto;
+        }
+        .search-sheet {
+            width: 100%;
+            max-width: 480px;
+            background: var(--card-bg);
+            color: var(--text);
+            border-radius: 20px 20px 0 0;
+            padding: 20px 20px 32px;
+            transform: translateY(100%);
+            transition: transform 0.3s cubic-bezier(0.32, 0.72, 0, 1);
+            max-height: 80vh;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+        }
+        .search-overlay.active .search-sheet {
+            transform: translateY(0);
+        }
+        .search-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding-bottom: 6px;
+            border-bottom: 1px solid var(--border);
+            flex-shrink: 0;
+        }
+        .search-header span {
+            font-size: 18px;
+            font-weight: 600;
+        }
+        .search-header .close-btn {
+            background: none;
+            border: none;
+            font-size: 16px;
+            color: var(--text-secondary);
+            cursor: pointer;
+            padding: 0 8px;
+        }
+        .search-input-wrap {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            width: 100%;
+            position: relative;
+        }
+        .search-input-wrap input {
+            flex: 1;
+            padding: 10px 12px;
+            border: 2px solid var(--border);
+            border-radius: 10px;
+            background: var(--card-bg);
+            color: var(--text);
+            font-size: 14px;
+            outline: none;
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+        }
+        .search-input-wrap input:focus {
+            border-color: var(--accent-color);
+        }
+        .search-input-wrap .search-clear-btn {
+            position: absolute;
+            right: 10px;
+            background: none;
+            border: none;
+            color: var(--text-secondary);
+            font-size: 16px;
+            cursor: pointer;
+            padding: 4px;
+        }
+        .search-input-wrap .search-clear-btn:hover {
+            color: var(--text);
+        }
+        .search-results-area {
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+            flex: 1;
+            overflow-y: auto;
+            padding: 4px 0;
+            min-height: 100px;
+        }
+        .search-result-item {
+            padding: 8px 12px;
+            background: var(--bg);
+            border-radius: 6px;
+            border: 1px solid var(--border);
+            cursor: pointer;
+            transition: 0.2s;
+        }
+        .search-result-item:active {
+            transform: scale(0.98);
+        }
+        .search-result-item .sr-name {
+            font-size: 13px;
+            font-weight: 600;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+        .search-result-item .sr-url {
+            font-size: 11px;
+            color: var(--text-secondary);
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+        .search-result-item .sr-source {
+            font-size: 10px;
+            color: var(--accent-color);
+            display: inline-block;
+            border: 1px solid var(--accent-color);
+            border-radius: 4px;
+            padding: 0 6px;
+            margin-right: 4px;
+        }
+        .search-empty {
+            text-align: center;
+            padding: 20px;
+            color: var(--text-secondary);
+            font-size: 13px;
+        }
+        /* ===== 搜索高亮 ===== */
+        .shortcut-item.search-highlight {
+            outline: 2px solid var(--accent-color);
+            outline-offset: 2px;
+            border-radius: 10px;
+            background: rgba(74, 144, 217, 0.05) !important;
+        }
+        .lib-row.search-highlight {
+            outline: 2px solid var(--accent-color);
+            outline-offset: -2px;
+            border-radius: 6px;
+            background: rgba(74, 144, 217, 0.05) !important;
+        }
+    </style>
+</head>
+<body>
+    <div class="bg-layer" id="bgLayer"></div>
+    <div class="page-scroll" id="pageScroll">
+        <div class="container" id="mainContainer">
+            <!-- 时钟 -->
+            <div class="clock-section" id="clockSection">
+                <div class="time" id="time">00:00</div>
+                <div class="date" id="date">2025年1月1日 星期三</div>
+            </div>
+            <!-- 搜索 🔴 placeholder="搜索..."-->
+                            <div class="date" id="date"><br><br></div>
+            
+            <div class="search-wrapper" id="searchWrapper">
+                <button class="search-engine-btn" id="engineBtn">必应</button>
+                <input type="text" class="search-box" id="searchInput" placeholder="" autocomplete="off" enterkeyhint="search">
+                <button class="search-clear" id="searchClear" title="清除">✕</button>
+                <div class="engine-dropdown" id="engineDropdown"></div>
+                <div class="history-dropdown" id="historyDropdown"></div>
+            </div>
+              <div class="date" id="date"><br><br></div>
+            <!-- 书签 🔴-->
+            <div class="shortcuts" id="shortcuts"></div>
+        </div>
+        <div class="footer" id="footerText"></div>
+    </div>
+
+    <!-- ★ 右下角 FAB 按钮组 -->
+    <div class="fab-group" id="fabGroup">
+        <button class="fab-btn run" id="runScriptFab" title="立即运行已勾选的脚本">▶ 运行</button>
+        <button class="fab-btn" id="libraryFab" title="打开书签库">📚</button>
+        <button class="fab-btn" id="searchFab" title="书签搜索">🔍</button>
+        <button class="fab-btn" id="settingsBtn" title="设置">⚙</button>
+    </div>
+    <!-- ★ 小竖线按钮（全透明） -->
+    <button class="fab-btn tiny-pipe" id="tinyPipeBtn" title="打开设置">｜</button>
+
+    <div class="toast" id="toast"></div>
+
+    <!-- ===== 书签库面板 ===== -->
+    <div class="lib-overlay" id="libOverlay">
+        <div class="lib-sheet" id="libSheet">
+            <div class="modal-handle"></div>
+            <div class="lib-header"><span>📚 书签库</span><button class="close-btn" id="libCloseBtn">✕</button></div>
+            <!-- 输入行：清除按钮在右下角 -->
+            <div class="lib-parse-row">
+                <textarea id="libClipboardInput" placeholder="粘贴标题和网址&#10;格式：标题：xxx网址：xxx"></textarea>
+                <button class="clear-filter-btn" id="libClearFilterBtn" title="清除过滤">✕</button>
+                <button id="libParseBtn">解析</button>
+            </div>
+            <div class="lib-list-area" id="libListContainer"><div class="lib-empty">暂无书签，请在上方粘贴后点击“解析”</div></div>
+            <div class="lib-batch-row" id="libBatchRow">
+                <button class="batch-btn outline" id="libBatchToggleBtn">☑ 批量</button>
+                <button class="batch-btn" id="libExportFileBtn">📤 导出文件</button>
+                <button class="batch-btn" id="libExportCopyBtn">📋 复制文本</button>
+                <button class="batch-btn" id="libImportBtn">📥 导入</button>
+                <button class="batch-btn" id="libResetBtn">🔄 重置</button>
+                <button class="batch-btn batch-add-btn" id="libAddAllBtn">全部添加到主页 (去重)</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ===== 书签搜索面板 ===== -->
+    <div class="search-overlay" id="searchOverlay">
+        <div class="search-sheet" id="searchSheet">
+            <div class="modal-handle"></div>
+            <div class="search-header"><span>🔍 书签搜索</span><button class="close-btn" id="searchCloseBtn">✕</button></div>
+            <div class="search-input-wrap">
+                <input type="text" id="searchKeywordInput" placeholder="输入标题或网址查找书签..." autocomplete="off">
+                <button class="search-clear-btn" id="searchClearBtn">✕</button>
+            </div>
+            <div class="search-results-area" id="searchResultsContainer"><div class="search-empty">请输入关键字开始搜索</div></div>
+        </div>
+    </div>
+
+    <!-- ===== 书签修改弹窗 ===== -->
+    <div class="edit-overlay" id="editModal">
+        <div class="edit-sheet" id="editSheet">
+            <div class="edit-title">✏️ 修改书签</div>
+            <input type="hidden" id="editIdx">
+            <div class="edit-field"><label>标题</label><input id="editName" type="text" placeholder="输入标题"></div>
+            <div class="edit-field"><label>网址</label><input id="editUrl" type="text" placeholder="输入网址"></div>
+            <div class="edit-actions">
+                <button class="cancel" id="editCancel">取消</button>
+                <button class="save" id="editSave">保存修改</button>
+                <button class="top-btn" id="editTopBtn" style="flex:1; background:#f0ad4e; color:#fff; border:none; border-radius:10px; font-weight:600; cursor:pointer; font-size:14px; padding:10px 0;">⬆ 置顶</button>
+            </div>
+            <div style="margin-top:-8px;"><button class="modal-btn delete" id="editDeleteBtn" style="display:none;">🗑 删除此书签</button></div>
+        </div>
+    </div>
+
+    <!-- ===== 重置菜单 ===== -->
+    <div class="reset-overlay" id="resetOverlay">
+        <div class="reset-sheet" id="resetSheet">
+            <div class="modal-handle"></div>
+            <div class="modal-title" style="margin-bottom:4px;">🔄 重置</div>
+            <div class="reset-option" id="resetHomeBtn">重置主页书签（仅清空网格）</div>
+            <div class="reset-option" id="resetLibraryBtn">重置书签库（仅清空库）</div>
+            <div class="reset-option danger" id="resetAllBtn">全部重置（两处全清空）</div>
+            <div class="reset-option cancel-opt" id="resetCancelBtn">取消</div>
+        </div>
+    </div>
+
+    <!-- ===== 设置面板 ===== -->
+    <div class="settings-overlay" id="settingsOverlay">
+        <div class="settings-sheet" id="settingsSheet">
+            <div id="settingsMain">
+                <div class="modal-handle"></div>
+                <div class="modal-title">⚙️ 设置</div>
+                <!-- 搜索引擎 -->
+                <div class="setting-block">
+                    <div class="setting-section-title">🔍 搜索引擎与风格</div>
+                    <div class="custom-search-field">
+                        <input type="text" id="customEngName" placeholder="引擎名称（如：搜狗）">
+                        <input type="text" id="customEngUrl" placeholder="搜索URL（如：https://www.sogou.com/web?query=）">
+                        <button id="addCustomEng">添加</button>
+                    </div>
+                    <div style="display:flex;gap:8px;margin-top:6px;">
+                        <button class="setting-btn" id="restoreDefaultEnginesBtn" style="border-color:var(--accent-color);color:var(--accent-color);">↺ 恢复默认引擎</button>
+                    </div>
+                    <div id="engineManageList" style="display:flex;flex-direction:column;gap:4px;margin-top:6px;"></div>
+                    <div class="setting-row" style="margin-top:8px;border-top:1px solid var(--border);padding-top:10px;">
+                        <span style="font-size:13px;flex-shrink:0;">搜索框风格</span>
+                        <select id="searchStyleSelect" style="flex:1;padding:8px 12px;border-radius:10px;border:2px solid var(--border);background:var(--card-bg);color:var(--text);font-size:14px;backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);">
+                            <option value="round">圆角（胶囊）</option>
+                            <option value="square">直角（方形）</option>
+                            <option value="wave">波浪边框</option>
+                            <option value="transparent">透明无边框</option>
+                        </select>
+                    </div>
+                </div>
+                <!-- 主页自定义 -->
+                <div class="setting-block">
+                    <div class="setting-section-title">🎨 主页自定义</div>
+                    <div class="setting-row">
+                        <span style="font-size:13px;flex-shrink:0;">文字颜色</span>
+                        <input type="color" id="textColorInput" value="#999999" style="flex:0 0 40px;height:36px;padding:2px;border-radius:8px;border:2px solid var(--border);cursor:pointer;">
+                        <button class="setting-btn" id="resetTextColor" style="flex:0.5;">默认</button>
+                    </div>
+                    <div class="setting-row">
+                        <span style="font-size:13px;flex-shrink:0;">背景颜色</span>
+                        <input type="color" id="bgColorInput" value="#f5f5f5" style="flex:0 0 40px;height:36px;padding:2px;border-radius:8px;border:2px solid var(--border);cursor:pointer;">
+                        <button class="setting-btn" id="resetBgColor" style="flex:0.5;">默认</button>
+                        <button class="setting-btn primary fill" id="randomColorBtn" style="flex:0.8;">🎲 随机</button>
+                    </div>
+                    <!-- 书签显示 -->
+                    <div class="setting-row" style="gap:4px;">
+                        <span style="font-size:13px;flex-shrink:0;">书签显示</span>
+                        <button class="setting-btn primary" data-mode="icon" id="iconModeBtn" style="flex:1; padding:6px 0; min-width:auto;">图标</button>
+                        <button class="setting-btn" data-mode="text" id="textModeBtn" style="flex:1; padding:6px 0; min-width:auto;">文字</button>
+                        <button class="setting-btn" data-mode="list" id="listModeBtn" style="flex:1; padding:6px 0; min-width:auto;">列表</button>
+                    </div>
+                    <!-- 时间显示 -->
+                    <div class="setting-row" style="gap:4px;">
+                        <span style="font-size:13px;flex-shrink:0;">时间显示</span>
+                        <button class="setting-btn primary" id="timeShowBtn" style="flex:1; padding:6px 0; min-width:auto;">显示</button>
+                        <button class="setting-btn" id="timeHideBtn" style="flex:1; padding:6px 0; min-width:auto;">隐藏</button>
+                    </div>
+                    <!-- ★ 按钮显示 -->
+                    <div class="setting-row" style="gap:4px;">
+                        <span style="font-size:13px;flex-shrink:0;">按钮显示</span>
+                        <button class="setting-btn primary" id="fabShowBtn" style="flex:1; padding:6px 0; min-width:auto;">显示</button>
+                        <button class="setting-btn" id="fabHideBtn" style="flex:1; padding:6px 0; min-width:auto;">隐藏</button>
+                    </div>
+                    <!-- 其他设置 -->
+                    <div class="setting-row">
+                        <span style="font-size:13px;flex-shrink:0;">高度</span>
+                        <input type="range" min="-120" max="120" step="2" value="0" id="layoutRange">
+                        <span class="layout-val" id="layoutVal">0px</span>
+                    </div>
+                    <div class="setting-row">
+                        <span style="font-size:13px;flex-shrink:0;">时间</span>
+                        <input type="range" min="32" max="80" step="2" value="56" id="clockSizeRange">
+                        <span class="layout-val" id="clockSizeVal">56px</span>
+                    </div>
+                    <div class="setting-row">
+                        <span style="font-size:13px;flex-shrink:0;">图标</span>
+                        <input type="range" min="32" max="64" step="2" value="36" id="iconSizeRange">
+                        <span class="layout-val" id="iconSizeVal">36px</span>
+                    </div>
+                    <div class="setting-row">
+                        <span style="font-size:13px;flex-shrink:0;">背景图片</span>
+                        <button class="setting-btn" id="bgUploadBtn" style="flex:0.8;">📁 上传</button>
+                        <button class="setting-btn" id="bgUrlBtn" style="flex:0.8;">🔗 URL</button>
+                        <button class="setting-btn danger" id="bgClearBtn" style="flex:0.6;">清除</button>
+                        <input type="file" id="bgFileInput" accept="image/*" style="display:none;">
+                    </div>
+                </div>
+                <!-- 脚本管理入口 -->
+                <div class="setting-block" id="enterScriptManager" style="cursor:pointer;border-color:var(--accent-color);">
+                    <div class="setting-section-title">📜 脚本管理 <span style="font-weight:normal;font-size:12px;color:var(--text-secondary);">(点击进入 →)</span></div>
+                </div>
+            </div>
+            <!-- 脚本管理视图 -->
+            <div class="script-manager-view" id="settingsScripts">
+                <button class="back-btn" id="backFromScripts">← 返回设置</button>
+                <div class="modal-title" style="margin-bottom:6px;">📜 脚本管理</div>
+                <div class="script-edit-area" id="scriptEditArea">
+                    <input type="text" id="scriptNameInput" placeholder="脚本名称（如：悬浮窗）">
+                    <textarea id="scriptCodeInput" placeholder="粘贴脚本代码..."></textarea>
+                    <div class="script-actions">
+                        <button class="sbtn save" id="saveScriptBtn">保存脚本</button>
+                        <button class="sbtn cancel" id="cancelScriptBtn">取消</button>
+                    </div>
+                </div>
+                <div style="display:flex;gap:8px;margin:4px 0;">
+                    <button class="setting-btn primary" id="showAddScriptBtn">＋ 添加脚本</button>
+                </div>
+                <div id="scriptListContainer" style="display:flex;flex-direction:column;gap:6px;"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ===== 编辑书签主弹窗 ===== -->
+    <div class="modal-overlay" id="modalOverlay">
+        <div class="modal-sheet" id="modalSheet">
+            <div class="modal-handle"></div>
+            <div class="modal-title" id="modalTitle">📝 编辑书签</div>
+            <div id="singleEditArea">
+                <div class="modal-field"><label class="modal-label">名称</label><input class="modal-input" id="modalName" type="text" placeholder="网站名称"></div>
+                <div class="modal-field"><label class="modal-label">网址</label><input class="modal-input" id="modalUrl" type="text" placeholder="https://..."></div>
+                <div class="modal-actions" style="display:flex; gap:6px; margin-top:8px; justify-content:space-between;">
+                    <button class="modal-btn cancel" id="modalCancel" style="flex:1; padding:12px 0; font-size:14px; border-radius:10px; background:var(--border); color:var(--text-secondary);">取消</button>
+                    <button class="modal-btn save" id="modalSave" style="flex:1; padding:12px 0; font-size:14px; border-radius:10px; background:var(--accent-color); color:#fff;">保存</button>
+                    <button class="modal-btn top-btn" id="modalTopBtn" style="flex:1; padding:12px 0; font-size:14px; border-radius:10px; background:#f0ad4e; color:#fff; font-weight:600; border:none;">置顶</button>
+                    <button id="modalDelete" style="flex:1; padding:12px 0; font-size:14px; border-radius:10px; background:#ffd4d4; color:#e05555; border:none; cursor:pointer;">删除</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // ===== 兼容 GM_* =====
+        if (typeof GM_getValue === 'undefined') {
+            window.GM_getValue = function(key, def) {
+                var val = localStorage.getItem(key);
+                return val !== null ? val : def;
+            };
+            window.GM_setValue = function(key, val) { localStorage.setItem(key, val); };
+            window.GM_deleteValue = function(key) { localStorage.removeItem(key); };
+            window.GM_listValues = function() { return Object.keys(localStorage); };
+        }
+
+        // ===== 基础数据 =====
+        var defShortcuts = [];
+        var shortcuts = loadShortcuts();
+        var editIdx = -1;
+        var pressTimer = null;
+        var suppressClick = false;
+        var isDeletingMode = false;
+
+        const PRESET_ICONS = ['📘', '📗', '📙', '📔', '💻', '📱', '🎮', '🎯', '💡', '📌', '🎵', '🎶', '🎨', '🌈', '🚀', '⭐', '🌙', '🌊', '🍕', '🍔', '🌮', '🍜', '🍣', '🥤'];
+
+        function loadShortcuts() {
+            try {
+                var s = localStorage.getItem('home_shortcuts');
+                if (s) { var d = JSON.parse(s); if (Array.isArray(d)) return d; }
+            } catch (e) {}
+            return JSON.parse(JSON.stringify(defShortcuts));
+        }
+        function saveShortcuts() { try { localStorage.setItem('home_shortcuts', JSON.stringify(shortcuts)); } catch (e) {} }
+
+        // ===== 时钟 =====
+        function updateClock() {
+            var n = new Date();
+            var h = n.getHours(),
+                m = n.getMinutes();
+            document.getElementById('time').textContent = String(h).padStart(2, '0') + ':' + String(m).padStart(2, '0');
+            var wd = ['日', '一', '二', '三', '四', '五', '六'];
+            document.getElementById('date').textContent = n.getFullYear() + '年' + (n.getMonth() + 1) + '月' + n.getDate() + '日 星期' + wd[n.getDay()];
+        }
+        updateClock();
+        setInterval(updateClock, 30000);
+
+        // ===== 搜索引擎管理 =====
+        var defaultEngines = [
+            { name: '必应', url: 'https://www.bing.com/search?q=' },
+            { name: '谷歌', url: 'https://www.google.com/search?q=' },
+            { name: 'duck', url: 'https://noai.duckduckgo.com/?q=' },
+            { name: '搜狗', url: 'https://www.sogou.com/web?query=' }
+        ];
+        var hiddenEngines = loadHiddenEngines();
+        var customEngines = loadCustomEngines();
+
+        function loadCustomEngines() {
+            try { var s = localStorage.getItem('home_custom_engines'); if (s) return JSON.parse(s); } catch (e) {}
+            return [];
+        }
+        function saveCustomEngines() { try { localStorage.setItem('home_custom_engines', JSON.stringify(customEngines)); } catch (e) {} }
+        function loadHiddenEngines() {
+            try { var s = localStorage.getItem('home_hidden_engines'); if (s) return JSON.parse(s); } catch (e) {}
+            return [];
+        }
+        function saveHiddenEngines() { try { localStorage.setItem('home_hidden_engines', JSON.stringify(hiddenEngines)); } catch (e) {} }
+        function getActiveEngines() {
+            var visibleDefaults = defaultEngines.filter(function(e) { return hiddenEngines.indexOf(e.name) === -1; });
+            return visibleDefaults.concat(customEngines);
+        }
+        var activeEngines = getActiveEngines();
+        var curEng = loadCurEngine();
+
+        function loadCurEngine() {
+            try {
+                var se = localStorage.getItem('home_engine');
+                if (se) { var p = JSON.parse(se); return p; }
+            } catch (e) {}
+            return activeEngines[0] || { name: '必应', url: 'https://www.bing.com/search?q=' };
+        }
+        function saveCurEngine() { try { localStorage.setItem('home_engine', JSON.stringify(curEng)); } catch (e) {} }
+
+        function renderEngineDropdown() {
+            var dd = document.getElementById('engineDropdown');
+            dd.innerHTML = activeEngines.map(function(e) {
+                return '<div class="engine-option ' + (e.name === curEng.name ? 'active' : '') + '" data-name="' + e.name + '" data-url="' + e.url + '">' +
+                    '<span>' + e.name + '</span>' +
+                    '</div>';
+            }).join('');
+            dd.querySelectorAll('.engine-option').forEach(function(o) {
+                o.addEventListener('click', function() {
+                    var name = this.dataset.name,
+                        url = this.dataset.url;
+                    curEng = { name: name, url: url };
+                    saveCurEngine();
+                    updateEngineBtn();
+                    dd.classList.remove('show');
+                    renderEngineDropdown();
+                });
+            });
+        }
+        function updateEngineBtn() { document.getElementById('engineBtn').textContent = curEng.name; }
+
+        function renderEngineManagementList() {
+            var cl = document.getElementById('engineManageList');
+            var html = '';
+            defaultEngines.forEach(function(e) {
+                if (hiddenEngines.indexOf(e.name) === -1) {
+                    html += '<div style="display:flex;justify-content:space-between;align-items:center;font-size:13px;padding:6px 0;border-bottom:1px solid var(--border);">' +
+                        '<span><strong>' + e.name + '</strong> <span style="color:var(--text-secondary);font-size:11px;">' + e.url + '</span></span>' +
+                        '<button class="del-engine-btn" data-name="' + e.name + '" data-isdefault="true" style="background:#ffd4d4;border:none;border-radius:6px;padding:2px 10px;color:#e05555;font-size:12px;cursor:pointer;">✕</button>' +
+                        '</div>';
+                }
+            });
+            customEngines.forEach(function(e, idx) {
+                html += '<div style="display:flex;justify-content:space-between;align-items:center;font-size:13px;padding:6px 0;border-bottom:1px solid var(--border);">' +
+                    '<span><strong>' + e.name + '</strong> <span style="color:var(--text-secondary);font-size:11px;">' + e.url + '</span></span>' +
+                    '<button class="del-engine-btn" data-name="' + e.name + '" data-isdefault="false" data-idx="' + idx + '" style="background:#ffd4d4;border:none;border-radius:6px;padding:2px 10px;color:#e05555;font-size:12px;cursor:pointer;">✕</button>' +
+                    '</div>';
+            });
+            if (!html) html = '<div style="font-size:12px;color:var(--text-secondary);padding:4px;">暂无可用引擎，请添加或恢复默认</div>';
+            cl.innerHTML = html;
+            cl.querySelectorAll('.del-engine-btn').forEach(function(btn) {
+                btn.addEventListener('click', function() {
+                    var name = this.dataset.name;
+                    var isDefault = this.dataset.isdefault === 'true';
+                    if (isDefault) {
+                        if (hiddenEngines.indexOf(name) === -1) {
+                            hiddenEngines.push(name);
+                            saveHiddenEngines();
+                        }
+                    } else {
+                        var idx = parseInt(this.dataset.idx);
+                        if (!isNaN(idx) && idx >= 0 && idx < customEngines.length) {
+                            customEngines.splice(idx, 1);
+                            saveCustomEngines();
+                        }
+                    }
+                    activeEngines = getActiveEngines();
+                    if (activeEngines.length > 0 && curEng.name === name) {
+                        curEng = activeEngines[0];
+                        saveCurEngine();
+                    }
+                    renderEngineDropdown();
+                    updateEngineBtn();
+                    renderEngineManagementList();
+                    showToast('✅ 已删除: ' + name);
+                });
+            });
+        }
+
+        document.getElementById('restoreDefaultEnginesBtn').addEventListener('click', function() {
+            if (confirm('恢复被隐藏的默认搜索引擎（自定义引擎将保留）？')) {
+                hiddenEngines = [];
+                saveHiddenEngines();
+                activeEngines = getActiveEngines();
+                curEng = activeEngines[0] || { name: '必应', url: 'https://www.bing.com/search?q=' };
+                saveCurEngine();
+                renderEngineDropdown();
+                updateEngineBtn();
+                renderEngineManagementList();
+                showToast('✅ 已恢复默认引擎');
+            }
+        });
+        document.getElementById('addCustomEng').addEventListener('click', function() {
+            var name = document.getElementById('customEngName').value.trim();
+            var url = document.getElementById('customEngUrl').value.trim();
+            if (!name || !url) { showToast('请填写名称和URL'); return; }
+            if (!/^https?:\/\//i.test(url)) { url = 'https://' + url; }
+            customEngines.push({ name: name, url: url });
+            saveCustomEngines();
+            activeEngines = getActiveEngines();
+            renderEngineDropdown();
+            renderEngineManagementList();
+            document.getElementById('customEngName').value = '';
+            document.getElementById('customEngUrl').value = '';
+            showToast('✅ 已添加自定义引擎');
+        });
+
+        renderEngineDropdown();
+        updateEngineBtn();
+        renderEngineManagementList();
+        document.getElementById('engineBtn').addEventListener('click', function(e) {
+            e.stopPropagation();
+            document.getElementById('engineDropdown').classList.toggle('show');
+        });
+        document.addEventListener('click', function(e) {
+            if (!e.target.closest('#searchWrapper')) {
+                document.getElementById('engineDropdown').classList.remove('show');
+            }
+        });
+
+        // ===== 搜索历史 =====
+        var si = document.getElementById('searchInput');
+        var sc = document.getElementById('searchClear');
+        si.addEventListener('input', function() { sc.classList.toggle('visible', si.value.length > 0); });
+        sc.addEventListener('click', function() { si.value = ''; sc.classList.remove('visible'); si.focus(); });
+
+        var searchHistory = loadSearchHistory();
+        function loadSearchHistory() {
+            try { var s = localStorage.getItem('home_search_history'); if (s) { var d = JSON.parse(s); if (Array.isArray(d)) return d; } } catch (e) {}
+            return [];
+        }
+        function saveSearchHistory() { try { localStorage.setItem('home_search_history', JSON.stringify(searchHistory)); } catch (e) {} }
+        function addSearchQuery(query) {
+            var q = query.trim();
+            if (!q) return;
+            var idx = searchHistory.indexOf(q);
+            if (idx !== -1) searchHistory.splice(idx, 1);
+            searchHistory.unshift(q);
+            if (searchHistory.length > 10) searchHistory.pop();
+            saveSearchHistory();
+        }
+        function renderSearchHistory() {
+            var hd = document.getElementById('historyDropdown');
+            if (!searchHistory || searchHistory.length === 0) {
+                hd.innerHTML = '<div class="history-empty">暂无搜索历史</div>';
+                return;
+            }
+            var html = searchHistory.map(function(q) {
+                return '<div class="history-item"><span class="h-text">' + q + '</span><button class="h-del" data-q="' + q + '">✕</button></div>';
+            }).join('');
+            html += '<div class="history-clear" id="clearHistoryBtn">清除所有历史记录</div>';
+            hd.innerHTML = html;
+            hd.querySelectorAll('.history-item').forEach(function(el) {
+                el.addEventListener('click', function(e) {
+                    if (e.target.closest('.h-del')) return;
+                    var text = this.querySelector('.h-text').textContent;
+                    si.value = text;
+                    si.focus();
+                    var url = buildSearchUrl(curEng.url, text);
+                    window.location.href = url;
+                });
+            });
+            hd.querySelectorAll('.h-del').forEach(function(btn) {
+                btn.addEventListener('click', function(e) {
+                    e.stopPropagation();
+                    var q = this.dataset.q;
+                    var idx = searchHistory.indexOf(q);
+                    if (idx !== -1) searchHistory.splice(idx, 1);
+                    saveSearchHistory();
+                    renderSearchHistory();
+                    showToast('已删除历史记录');
+                });
+            });
+            var clearBtn = document.getElementById('clearHistoryBtn');
+            if (clearBtn) {
+                clearBtn.addEventListener('click', function(e) {
+                    e.stopPropagation();
+                    if (confirm('确定要清除所有搜索历史记录吗？')) {
+                        searchHistory = [];
+                        saveSearchHistory();
+                        renderSearchHistory();
+                        showToast('已清除历史记录');
+                    }
+                });
+            }
+        }
+        si.addEventListener('focus', function() {
+            renderSearchHistory();
+            document.getElementById('historyDropdown').classList.add('show');
+        });
+        si.addEventListener('blur', function() {
+            setTimeout(function() { document.getElementById('historyDropdown').classList.remove('show'); }, 200);
+        });
+
+        function buildSearchUrl(baseUrl, query) {
+            var q = encodeURIComponent(query);
+            if (baseUrl.indexOf('{q}') !== -1) return baseUrl.replace(/\{q\}/g, q);
+            if (baseUrl.indexOf('%s') !== -1) return baseUrl.replace(/%s/g, q);
+            if (baseUrl.indexOf('{searchTerms}') !== -1) return baseUrl.replace(/\{searchTerms\}/g, q);
+            if (baseUrl.endsWith('=')) return baseUrl + q;
+            var separator = baseUrl.indexOf('?') !== -1 ? '&' : '?';
+            return baseUrl + separator + 'q=' + q;
+        }
+        si.addEventListener('keydown', function(e) {
+            if (e.key === 'Enter' && si.value.trim()) {
+                var query = si.value.trim();
+                addSearchQuery(query);
+                var url = buildSearchUrl(curEng.url, query);
+                window.location.href = url;
+            }
+        });
+
+        // ===== 书签显示模式 =====
+        var iconDisplayMode = localStorage.getItem('home_icon_mode') || 'icon';
+        var viewMode = localStorage.getItem('home_view_mode') || 'grid';
+
+        function truncateByChars(text, maxChars) {
+            if (!text) return '';
+            return text.length > maxChars ? text.substring(0, maxChars) + '…' : text;
+        }
+
+        // ===== 渲染书签 =====
+        function renderShortcuts() {
+            var cont = document.getElementById('shortcuts');
+            var hasNewIcon = false;
+            for (var i = 0; i < shortcuts.length; i++) {
+                if (!shortcuts[i].icon) {
+                    shortcuts[i].icon = PRESET_ICONS[i % PRESET_ICONS.length];
+                    hasNewIcon = true;
+                }
+            }
+            if (hasNewIcon) saveShortcuts();
+            if (shortcuts.length === 0) {
+                cont.innerHTML = '<div class="sc-empty">双击空白处，添加书签 ✨</div>';
+                return;
+            }
+
+            var html = '';
+            if (viewMode === 'list') {
+                cont.style.display = 'flex';
+                cont.style.flexDirection = 'column';
+                cont.style.gap = '1px';
+                cont.style.gridTemplateColumns = 'none';
+                for (var i = 0; i < shortcuts.length; i++) {
+                    var s = shortcuts[i];
+                    var iconContent = (iconDisplayMode === 'text') ?
+                        '<span class="icon-fallback">' + (s.name || '网').charAt(0) + '</span>' :
+                        '<span class="icon-fallback">' + s.icon + '</span>';
+                    var safeName = truncateByChars(s.name, 28);
+                    var safeUrl = truncateByChars(s.url, 50);
+                    html += `<div class="shortcut-item list-mode" data-index="${i}" style="display:flex; flex-direction:row; align-items:center; width:100%; padding:1px 0; background:transparent !important; box-shadow:none !important; border-radius:0 !important; cursor:pointer;">
+                                <div class="shortcut-icon" style="flex-shrink:0; width:var(--icon-size); height:var(--icon-size); display:flex; align-items:center; justify-content:center; border-radius:10px; overflow:hidden; font-size:calc(var(--icon-size) / 2.2); color:#fff; font-weight:700; background:transparent !important;">${iconContent}</div>
+                                <div style="display:flex; flex-direction:column; flex:1; min-width:0; line-height:1.0;">
+                                    <span style="font-size:14px; font-weight:600; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; color:var(--bookmark-text-color); text-shadow:-1px -1px 0 var(--text-stroke-color), 1px -1px 0 var(--text-stroke-color), -1px 1px 0 var(--text-stroke-color), 1px 1px 0 var(--text-stroke-color);">${safeName}</span>
+                                    <span style="font-size:14px; color:#999; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; text-shadow:0 1px 2px rgba(0,0,0,0.2);">${safeUrl}</span>
+                                </div>
+                            </div>`;
+                }
+                cont.innerHTML = html;
+            } else {
+                cont.style.display = 'grid';
+                cont.style.gridTemplateColumns = 'repeat(4, 1fr)';
+                cont.style.gap = '14px';
+                cont.style.flexDirection = '';
+                for (var j = 0; j < shortcuts.length; j++) {
+                    var sGrid = shortcuts[j];
+                    var displayName = sGrid.name;
+                    if (displayName.length > 6) displayName = displayName.substring(0, 6) + '…';
+                    var iconContentGrid = (iconDisplayMode === 'text') ?
+                        '<span class="icon-fallback">' + (sGrid.name || '网').charAt(0) + '</span>' :
+                        '<span class="icon-fallback">' + sGrid.icon + '</span>';
+                    html += `<div class="shortcut-item" data-index="${j}">
+                                <span class="delete-btn" data-index="${j}">✕</span>
+                                <span class="edit-btn" data-index="${j}">✎</span>
+                                <span class="move-up-btn" data-index="${j}">⬆</span>
+                                <span class="move-down-btn" data-index="${j}">⬇</span>
+                                <div class="shortcut-icon">${iconContentGrid}</div>
+                                <span class="shortcut-name">${displayName}</span>
+                            </div>`;
+                }
+                cont.innerHTML = html;
+                if (isDeletingMode && shortcuts.length > 0) {
+                    document.querySelectorAll('.shortcut-item').forEach(function(el) { el.classList.add('deleting'); });
+                } else {
+                    document.querySelectorAll('.shortcut-item').forEach(function(el) { el.classList.remove('deleting'); });
+                }
+            }
+        }
+
+        // ===== 随机颜色 =====
+        document.getElementById('randomColorBtn').addEventListener('click', function() {
+            if (shortcuts.length === 0) { showToast('⚠️ 没有书签可以随机'); return; }
+            for (var i = 0; i < shortcuts.length; i++) {
+                var color = '#' + ('000000' + Math.floor(Math.random() * 16777215).toString(16)).slice(-6);
+                shortcuts[i].bg = color;
+                if (iconDisplayMode === 'icon') {
+                    shortcuts[i].icon = PRESET_ICONS[Math.floor(Math.random() * PRESET_ICONS.length)];
+                }
+            }
+            saveShortcuts();
+            renderShortcuts();
+            showToast('🎲 已随机分配颜色和图标');
+        });
+
+        // ===== 书签交互 =====
+        document.getElementById('shortcuts').addEventListener('touchstart', function(e) {
+            if (document.getElementById('libOverlay').classList.contains('active')) return;
+            var it = e.target.closest('.shortcut-item');
+            if (!it || isDeletingMode) return;
+            var touch = e.touches[0];
+            var startX = touch.clientX,
+                startY = touch.clientY;
+            pressTimer = setTimeout(function() {
+                var dx = touch.clientX - startX,
+                    dy = touch.clientY - startY;
+                if (Math.sqrt(dx * dx + dy * dy) < 15) {
+                    var idx = parseInt(it.dataset.index);
+                    if (!isNaN(idx) && idx >= 0 && idx < shortcuts.length) {
+                        openModal(idx);
+                        suppressClick = true;
+                    }
+                }
+            }, 1000);
+        }, { passive: true });
+        document.getElementById('shortcuts').addEventListener('touchmove', function() { clearTimeout(pressTimer); }, { passive: true });
+        document.getElementById('shortcuts').addEventListener('touchend', function() { clearTimeout(pressTimer); });
+
+        document.getElementById('shortcuts').addEventListener('click', function(e) {
+            var it = e.target.closest('.shortcut-item');
+            if (!it) return;
+
+            if (viewMode === 'grid') {
+                var delBtn = e.target.closest('.delete-btn');
+                var editBtn = e.target.closest('.edit-btn');
+                var moveUp = e.target.closest('.move-up-btn');
+                var moveDown = e.target.closest('.move-down-btn');
+                if (delBtn) {
+                    var idx = parseInt(delBtn.dataset.index);
+                    if (!isNaN(idx) && idx >= 0 && idx < shortcuts.length) {
+                        shortcuts.splice(idx, 1);
+                        saveShortcuts();
+                        renderShortcuts();
+                        showToast('✅ 书签已删除');
+                    }
+                    return;
+                }
+                if (editBtn) {
+                    var idx = parseInt(editBtn.dataset.index);
+                    if (!isNaN(idx) && idx >= 0 && idx < shortcuts.length) {
+                        isDeletingMode = false;
+                        renderShortcuts();
+                        openModal(idx);
+                    }
+                    return;
+                }
+                if (moveUp) {
+                    var idx = parseInt(moveUp.dataset.index);
+                    if (!isNaN(idx) && idx >= 0 && idx < shortcuts.length) {
+                        var targetIdx = idx - 4;
+                        if (targetIdx >= 0) {
+                            var temp = shortcuts[idx];
+                            shortcuts[idx] = shortcuts[targetIdx];
+                            shortcuts[targetIdx] = temp;
+                            saveShortcuts();
+                            renderShortcuts();
+                            showToast('✅ 书签已上移');
+                        } else showToast('⚠️ 已在最顶行');
+                    }
+                    return;
+                }
+                if (moveDown) {
+                    var idx = parseInt(moveDown.dataset.index);
+                    if (!isNaN(idx) && idx >= 0 && idx < shortcuts.length) {
+                        var targetIdx = idx + 4;
+                        if (targetIdx < shortcuts.length) {
+                            var temp = shortcuts[idx];
+                            shortcuts[idx] = shortcuts[targetIdx];
+                            shortcuts[targetIdx] = temp;
+                            saveShortcuts();
+                            renderShortcuts();
+                            showToast('✅ 书签已下移');
+                        } else showToast('⚠️ 已在最底行');
+                    }
+                    return;
+                }
+                if (isDeletingMode) {
+                    isDeletingMode = false;
+                    renderShortcuts();
+                    return;
+                }
+            }
+
+            if (suppressClick) { suppressClick = false; return; }
+            var idx = parseInt(it.dataset.index);
+            if (shortcuts[idx] && shortcuts[idx].url) {
+                window.location.href = shortcuts[idx].url;
+            }
+        });
+        document.addEventListener('click', function(e) {
+            if (!e.target.closest('.shortcut-item') && isDeletingMode) {
+                isDeletingMode = false;
+                renderShortcuts();
+            }
+        });
+        document.addEventListener('dblclick', function(e) {
+            if (document.getElementById('libOverlay').classList.contains('active')) return;
+            if (e.target.closest('.shortcut-item') || e.target.closest('.search-wrapper') ||
+                e.target.closest('.modal-overlay') || e.target.closest('.settings-overlay')) return;
+            openModal(-1);
+        });
+        document.getElementById('shortcuts').addEventListener('contextmenu', function(e) { e.preventDefault(); });
+
+        // ===== 编辑弹窗 =====
+        var mo = document.getElementById('modalOverlay'),
+            mt = document.getElementById('modalTitle'),
+            mn = document.getElementById('modalName'),
+            mu = document.getElementById('modalUrl'),
+            ms = document.getElementById('modalSave'),
+            mc = document.getElementById('modalCancel'),
+            md = document.getElementById('modalDelete');
+        var modalTopBtn = document.getElementById('modalTopBtn');
+
+        function openModal(i) {
+            editIdx = i;
+            if (i < 0 || i >= shortcuts.length) {
+                mt.textContent = '✨ 添加书签';
+                mn.value = '';
+                mu.value = '';
+                md.style.display = 'none';
+                modalTopBtn.style.display = 'none';
+            } else {
+                mt.textContent = '📝 编辑书签';
+                mn.value = shortcuts[i].name;
+                mu.value = shortcuts[i].url;
+                md.style.display = 'flex';
+                modalTopBtn.style.display = 'flex';
+                md.onclick = function() {
+                    if (confirm('确定删除此书签？')) {
+                        shortcuts.splice(i, 1);
+                        saveShortcuts();
+                        renderShortcuts();
+                        closeModal();
+                    }
+                };
+            }
+            mo.classList.add('active');
+        }
+
+        function closeModal() { mo.classList.remove('active');
+            editIdx = -1; }
+        mc.addEventListener('click', closeModal);
+        mo.addEventListener('click', function(e) { if (e.target === mo) closeModal(); });
+        ms.addEventListener('click', function() {
+            var n = mn.value.trim(),
+                u = mu.value.trim();
+            if (!n || !u) return;
+            if (editIdx < 0 || editIdx >= shortcuts.length) {
+                shortcuts.push({ name: n, icon: n.charAt(0), url: u });
+            } else {
+                shortcuts[editIdx].name = n;
+                shortcuts[editIdx].url = u;
+            }
+            saveShortcuts();
+            renderShortcuts();
+            closeModal();
+        });
+        mn.addEventListener('keydown', function(e) { if (e.key === 'Enter') mu.focus(); });
+        mu.addEventListener('keydown', function(e) { if (e.key === 'Enter') ms.click(); });
+        modalTopBtn.addEventListener('click', function() {
+            var idx = parseInt(editIdx);
+            if (isNaN(idx) || idx < 0 || idx >= shortcuts.length) return;
+            var item = shortcuts.splice(idx, 1)[0];
+            shortcuts.unshift(item);
+            saveShortcuts();
+            renderShortcuts();
+            closeModal();
+            showToast('✅ 书签已置顶');
+        });
+
+        // ===== 设置面板 =====
+        var so = document.getElementById('settingsOverlay');
+        var mainView = document.getElementById('settingsMain');
+        var scriptView = document.getElementById('settingsScripts');
+        document.getElementById('settingsBtn').addEventListener('click', function() {
+            so.classList.add('active');
+            mainView.style.display = 'block';
+            scriptView.classList.remove('active');
+            loadSettingsUI();
+        });
+        so.addEventListener('click', function(e) { if (e.target === so) so.classList.remove('active'); });
+        document.getElementById('enterScriptManager').addEventListener('click', function() {
+            mainView.style.display = 'none';
+            scriptView.classList.add('active');
+            renderScriptList();
+        });
+        document.getElementById('backFromScripts').addEventListener('click', function() {
+            mainView.style.display = 'block';
+            scriptView.classList.remove('active');
+        });
+
+        // ===== 脚本管理 =====
+        var scripts = loadScripts();
+
+        function loadScripts() {
+            try { var s = localStorage.getItem('home_scripts'); if (s) { var d = JSON.parse(s); if (Array.isArray(d)) return d; } } catch (e) {}
+            return [];
+        }
+
+        function saveScripts() { try { localStorage.setItem('home_scripts', JSON.stringify(scripts)); } catch (e) {} }
+
+        function renderScriptList() {
+            var cont = document.getElementById('scriptListContainer');
+            if (scripts.length === 0) {
+                cont.innerHTML = '<div style="text-align:center;color:var(--text-secondary);padding:20px;font-size:13px;">暂无保存的脚本，点击上方“添加脚本”</div>';
+                return;
+            }
+            cont.innerHTML = scripts.map(function(s, i) {
+                return '<div class="script-list-item"><input type="checkbox" ' + (s.checked ? 'checked' : '') +
+                    ' data-idx="' + i + '"><span class="sname">' + s.name +
+                    '</span><button class="sdel" data-idx="' + i + '">✕</button></div>';
+            }).join('');
+            cont.querySelectorAll('input[type="checkbox"]').forEach(function(cb) {
+                cb.addEventListener('change', function() {
+                    var idx = parseInt(this.dataset.idx);
+                    scripts[idx].checked = this.checked;
+                    saveScripts();
+                });
+            });
+            cont.querySelectorAll('.sdel').forEach(function(btn) {
+                btn.addEventListener('click', function() {
+                    var idx = parseInt(this.dataset.idx);
+                    if (confirm('确定删除脚本「' + scripts[idx].name + '」？')) {
+                        scripts.splice(idx, 1);
+                        saveScripts();
+                        renderScriptList();
+                        showToast('已删除');
+                    }
+                });
+            });
+        }
+        var scriptEditArea = document.getElementById('scriptEditArea');
+        document.getElementById('showAddScriptBtn').addEventListener('click', function() {
+            document.getElementById('scriptNameInput').value = '';
+            document.getElementById('scriptCodeInput').value = '';
+            scriptEditArea.classList.add('active');
+        });
+        document.getElementById('cancelScriptBtn').addEventListener('click', function() { scriptEditArea.classList.remove('active'); });
+        document.getElementById('saveScriptBtn').addEventListener('click', function() {
+            var name = document.getElementById('scriptNameInput').value.trim();
+            var code = document.getElementById('scriptCodeInput').value.trim();
+            if (!name) { showToast('请输入脚本名称'); return; }
+            if (!code) { showToast('请输入脚本代码'); return; }
+            scripts.push({ name: name, code: code, checked: false });
+            saveScripts();
+            renderScriptList();
+            scriptEditArea.classList.remove('active');
+            showToast('✅ 脚本已保存');
+        });
+
+        // ===== 运行脚本（永久禁用） =====
+        var runBtn = document.getElementById('runScriptFab');
+        runBtn.addEventListener('click', function() {
+            // 立即禁用，防止再次点击
+            runBtn.disabled = true;
+            runBtn.textContent = '⏳ 运行中';
+            var hasRun = false;
+            for (var i = 0; i < scripts.length; i++) {
+                if (scripts[i].checked) {
+                    hasRun = true;
+                    try {
+                        eval(scripts[i].code);
+                    } catch (e) {
+                        console.error('脚本「' + scripts[i].name + '」出错:', e);
+                        showToast('❌ 「' + scripts[i].name + '」出错: ' + e.message);
+                    }
+                }
+            }
+            if (hasRun) {
+                showToast('✅ 已运行所有勾选的脚本');
+            } else {
+                showToast('⚠️ 未勾选任何脚本');
+            }
+            // 保持禁用，不再恢复
+            runBtn.textContent = '▶ 已运行';
+        });
+
+        // =============================================================
+        // ★ 书签库逻辑（含过滤功能）★
+        // =============================================================
+
+        function getLibrary() {
+            try {
+                var s = localStorage.getItem('home_library_bookmarks');
+                if (s) { var d = JSON.parse(s); if (Array.isArray(d)) return d; }
+            } catch (e) {}
+            return [];
+        }
+
+        function saveLibrary(lib) {
+            try { localStorage.setItem('home_library_bookmarks', JSON.stringify(lib)); } catch (e) {}
+        }
+
+        function autoCompleteUrl(url) {
+            url = url.trim();
+            if (!url) return url;
+            if (!/^https?:\/\//i.test(url)) return 'https://' + url;
+            return url;
+        }
+
+        function parseClipText(text) {
+            text = text.trim();
+            var title = '',
+                url = '';
+            var m1 = text.match(/标题[：:]\s*(.*?)\s*网址[：:]\s*(.*)/);
+            if (m1) {
+                title = m1[1].trim();
+                url = autoCompleteUrl(m1[2].trim());
+                return { title, url };
+            }
+            var urlMatch = text.match(/https?:\/\/[^\s]+/);
+            if (urlMatch) {
+                url = urlMatch[0];
+                var parts = text.split(url);
+                if (parts.length > 0 && parts[0].trim()) {
+                    title = parts[0].trim().replace(/^标题[：:]\s*/, '').trim();
+                } else title = '未命名网页';
+                return { title, url };
+            }
+            var domainMatch = text.match(/([a-zA-Z0-9-]+\.([a-zA-Z]{2,})[a-zA-Z0-9-]*)/);
+            if (domainMatch) {
+                url = autoCompleteUrl(domainMatch[1]);
+                var parts = text.split(domainMatch[0]);
+                if (parts.length > 0 && parts[0].trim()) {
+                    title = parts[0].trim().replace(/^标题[：:]\s*/, '').trim();
+                } else title = '未命名网页';
+                return { title, url };
+            }
+            if (text) {
+                title = text;
+                url = '#';
+                return { title, url };
+            }
+            return { title: '未命名', url: '#' };
+        }
+
+        var isBatchMode = false;
+
+        // ★ 渲染书签库列表（支持过滤）★
+        function renderLibraryList(filterText) {
+            var lib = getLibrary();
+            var cont = document.getElementById('libListContainer');
+            if (!cont) return;
+
+            // 如果传入了过滤文本，进行过滤
+            var filtered = lib;
+            if (filterText && filterText.trim()) {
+                var keyword = filterText.trim().toLowerCase();
+                filtered = lib.filter(function(item) {
+                    var name = (item.name || '').toLowerCase();
+                    var url = (item.url || '').toLowerCase();
+                    return name.indexOf(keyword) !== -1 || url.indexOf(keyword) !== -1;
+                });
+            }
+
+            if (filtered.length === 0) {
+                cont.innerHTML = '<div class="lib-empty">' + (lib.length === 0 ? '暂无书签，请在上方粘贴后点击“解析”' : '没有匹配的书签') + '</div>';
+                return;
+            }
+
+            var html = '';
+            filtered.forEach(function(item, idx) {
+                // 获取在原始库中的真实索引（用于操作）
+                var realIdx = lib.indexOf(item);
+                var name = item.name || '未命名';
+                if (name.length > 20) name = name.substring(0, 20) + '…';
+                var url = item.url || '#';
+                if (url.length > 40) url = url.substring(0, 40) + '…';
+                var checkboxHtml = isBatchMode ? '<input type="checkbox" class="lib-check" data-idx="' + realIdx + '" style="margin-right:6px; width:16px; height:16px; cursor:pointer;">' : '';
+                html += '<div class="lib-row" data-idx="' + realIdx + '">' +
+                    '<div class="lib-info" data-idx="' + realIdx + '">' +
+                    checkboxHtml +
+                    '<span class="lib-name">' + name + '</span>' +
+                    '<span class="lib-url">' + url + '</span>' +
+                    '</div>' +
+                    '<div class="lib-actions">' +
+                    '<button class="btn-add" data-idx="' + realIdx + '" title="添加到主页">➕</button>' +
+                    '<button class="btn-edit" data-idx="' + realIdx + '" title="修改">✏️</button>' +
+                    '<button class="btn-del" data-idx="' + realIdx + '" title="删除">✕</button>' +
+                    '</div></div>';
+            });
+            cont.innerHTML = html;
+
+            // 事件绑定（使用真实索引）
+            cont.querySelectorAll('.lib-info').forEach(function(el) {
+                el.addEventListener('click', function(e) {
+                    if (e.target.closest('.lib-check')) return;
+                    var idx = parseInt(this.dataset.idx);
+                    var lib = getLibrary();
+                    if (idx < 0 || idx >= lib.length) return;
+                    var item = lib[idx];
+                    if (item.url && item.url !== '#') {
+                        if (isBatchMode) exitBatchMode();
+                        window.open(item.url, '_blank');
+                        closeLibrary();
+                    }
+                });
+            });
+            cont.querySelectorAll('.btn-add').forEach(function(btn) {
+                btn.addEventListener('click', function(e) {
+                    e.stopPropagation();
+                    var idx = parseInt(this.dataset.idx);
+                    var lib = getLibrary();
+                    if (idx < 0 || idx >= lib.length) return;
+                    var item = lib[idx];
+                    var exists = shortcuts.some(function(b) { return b.url === item.url; });
+                    if (exists) { showToast('⚠️ 该书签已在网格中'); return; }
+                    shortcuts.push({ name: item.name || '未命名', icon: (item.name || '网').charAt(0), url: item.url });
+                    saveShortcuts();
+                    renderShortcuts();
+                    showToast('✅ 已添加到主页');
+                    // 重新应用当前过滤
+                    refreshLibraryView();
+                });
+            });
+            cont.querySelectorAll('.btn-edit').forEach(function(btn) {
+                btn.addEventListener('click', function(e) {
+                    e.stopPropagation();
+                    var idx = parseInt(this.dataset.idx);
+                    var lib = getLibrary();
+                    if (idx < 0 || idx >= lib.length) return;
+                    document.getElementById('editName').value = lib[idx].name || '';
+                    document.getElementById('editUrl').value = lib[idx].url || '';
+                    document.getElementById('editIdx').value = idx;
+                    document.getElementById('editModal').classList.add('active');
+                });
+            });
+            cont.querySelectorAll('.btn-del').forEach(function(btn) {
+                btn.addEventListener('click', function(e) {
+                    e.stopPropagation();
+                    var idx = parseInt(this.dataset.idx);
+                    var lib = getLibrary();
+                    if (idx < 0 || idx >= lib.length) return;
+                    if (confirm('确定从书签库中删除该书签吗？')) {
+                        lib.splice(idx, 1);
+                        saveLibrary(lib);
+                        renderLibraryList();
+                        showToast('已从书签库删除');
+                        // 重新应用当前过滤
+                        refreshLibraryView();
+                    }
+                });
+            });
+            if (isBatchMode) {
+                cont.querySelectorAll('.lib-check').forEach(function(cb) {
+                    cb.addEventListener('click', function(e) { e.stopPropagation(); });
+                });
+            }
+            updateBatchButtonText();
+        }
+
+        // ★ 刷新视图（保留当前过滤）★
+        function refreshLibraryView() {
+            var filter = document.getElementById('libClipboardInput').value;
+            renderLibraryList(filter);
+        }
+
+        // 更新批量按钮文字
+        function updateBatchButtonText() {
+            var addBtn = document.getElementById('libAddAllBtn');
+            if (isBatchMode) {
+                addBtn.textContent = '勾选添加到主页 (去重)';
+                addBtn.style.background = '#f0ad4e';
+                addBtn.style.color = '#fff';
+            } else {
+                addBtn.textContent = '全部添加到主页 (去重)';
+                addBtn.style.background = 'var(--accent-color)';
+                addBtn.style.color = '#fff';
+            }
+        }
+
+        function exitBatchMode() {
+            if (!isBatchMode) return;
+            isBatchMode = false;
+            document.getElementById('libBatchToggleBtn').textContent = '☑ 批量';
+            refreshLibraryView();
+        }
+
+        function enterBatchMode() {
+            if (isBatchMode) { exitBatchMode(); return; }
+            var lib = getLibrary();
+            if (lib.length === 0) { showToast('书签库为空，无法进入批量模式'); return; }
+            isBatchMode = true;
+            document.getElementById('libBatchToggleBtn').textContent = '☑ 退出批量';
+            refreshLibraryView();
+        }
+
+        function forceExitAnd(action) {
+            if (isBatchMode) exitBatchMode();
+            action();
+        }
+
+        var libOverlay = document.getElementById('libOverlay');
+
+        function openLibrary() {
+            libOverlay.classList.add('active');
+            document.body.style.overflow = 'hidden';
+            if (isBatchMode) exitBatchMode();
+            // 清空过滤输入框，显示全部
+            var input = document.getElementById('libClipboardInput');
+            input.value = '';
+            document.getElementById('libClearFilterBtn').classList.remove('visible');
+            renderLibraryList('');
+        }
+
+        function closeLibrary() {
+            document.getElementById('libClipboardInput').value = '';
+            document.getElementById('libClearFilterBtn').classList.remove('visible');
+            if (isBatchMode) exitBatchMode();
+            libOverlay.classList.remove('active');
+            document.body.style.overflow = '';
+        }
+
+        document.getElementById('libraryFab').addEventListener('click', openLibrary);
+        document.getElementById('libCloseBtn').addEventListener('click', closeLibrary);
+        libOverlay.addEventListener('click', function(e) {
+            if (e.target === this) {
+                if (isBatchMode) { exitBatchMode();
+                    refreshLibraryView(); } else closeLibrary();
+            }
+        });
+        document.getElementById('libBatchToggleBtn').addEventListener('click', function() {
+            if (isBatchMode) exitBatchMode();
+            else enterBatchMode();
+        });
+
+        // ★ 过滤输入框事件 ★
+        var clipInput = document.getElementById('libClipboardInput');
+        var clearFilterBtn = document.getElementById('libClearFilterBtn');
+
+        clipInput.addEventListener('input', function() {
+            var val = this.value;
+            clearFilterBtn.classList.toggle('visible', val.length > 0);
+            renderLibraryList(val);
+        });
+
+        clearFilterBtn.addEventListener('click', function() {
+            clipInput.value = '';
+            clearFilterBtn.classList.remove('visible');
+            renderLibraryList('');
+            clipInput.focus();
+        });
+
+        // ★ 解析按钮（解析后清空过滤）★
+        document.getElementById('libParseBtn').addEventListener('click', function() {
+            forceExitAnd(function() {
+                var raw = document.getElementById('libClipboardInput').value.trim();
+                if (!raw) { showToast('⚠️ 请先粘贴内容'); return; }
+                var lines = raw.split('\n').filter(function(line) { return line.trim() !== ''; });
+                var parsedItems = [];
+                lines.forEach(function(line) {
+                    var parsed = parseClipText(line);
+                    if (!parsed.url || parsed.url === '#') return;
+                    parsedItems.push({ name: parsed.title || '未命名', icon: (parsed.title || '网').charAt(0),
+                        url: parsed.url });
+                });
+                if (parsedItems.length === 0) { showToast('⚠️ 未能解析出有效书签，请检查格式'); return; }
+                var lib = getLibrary();
+                var newUniqueItems = [];
+                parsedItems.forEach(function(item) {
+                    var exists = lib.some(function(b) { return b.url === item.url; });
+                    if (!exists) newUniqueItems.push(item);
+                });
+                if (newUniqueItems.length === 0) { showToast('⚠️ 所有解析出的书签均已存在'); return; }
+                lib = newUniqueItems.concat(lib);
+                saveLibrary(lib);
+                // 清空输入框并刷新全部
+                clipInput.value = '';
+                clearFilterBtn.classList.remove('visible');
+                renderLibraryList('');
+                showToast('✅ 成功添加 ' + newUniqueItems.length + ' 个书签（跳过 ' + (parsedItems.length - newUniqueItems.length) +
+                    ' 个重复）');
+            });
+        });
+
+        // ===== 导出、导入、重置等（略作修改以支持过滤刷新） =====
+        function getExportList() {
+            var lib = getLibrary();
+            if (lib.length === 0) return [];
+            if (isBatchMode) {
+                var checked = document.querySelectorAll('.lib-check:checked');
+                if (checked.length === 0) return [];
+                var exportList = [];
+                checked.forEach(function(cb) {
+                    var idx = parseInt(cb.dataset.idx);
+                    if (idx >= 0 && idx < lib.length) exportList.push(lib[idx]);
+                });
+                return exportList;
+            }
+            return lib;
+        }
+
+        document.getElementById('libExportFileBtn').addEventListener('click', function() {
+            var list = getExportList();
+            if (!list || list.length === 0) { showToast(isBatchMode ? '⚠️ 请至少勾选一个书签' : '⚠️ 书签库为空'); return; }
+            var html = '<!DOCTYPE NETSCAPE Bookmark-file-1>\n<META charset="UTF-8">\n<TITLE>书签库备份</TITLE>\n<DL><p>\n';
+            list.forEach(function(b) {
+                html += '    <DT><A HREF="' + (b.url || '#').replace(/"/g, '&quot;') + '">' + (b.name || '未命名')
+                    .replace(/</g, '&lt;').replace(/>/g, '&gt;') + '</A>\n';
+            });
+            html += '</DL><p>';
+            var blob = new Blob([html], { type: 'text/html;charset=utf-8' });
+            var a = document.createElement('a');
+            a.href = URL.createObjectURL(blob);
+            a.download = 'library_bookmarks.html';
+            a.click();
+            setTimeout(function() { URL.revokeObjectURL(a.href); }, 5000);
+            showToast('✅ 已导出 ' + list.length + ' 个书签');
+            if (isBatchMode) exitBatchMode();
+            refreshLibraryView();
+        });
+
+        document.getElementById('libExportCopyBtn').addEventListener('click', function() {
+            var list = getExportList();
+            if (!list || list.length === 0) { showToast(isBatchMode ? '⚠️ 请至少勾选一个书签' : '⚠️ 书签库为空'); return; }
+            var text = '';
+            list.forEach(function(b, i) {
+                text += '标题：' + (b.name || '未命名') + '网址：' + (b.url || '#');
+                if (i < list.length - 1) text += '\n';
+            });
+            if (navigator.clipboard && navigator.clipboard.writeText) {
+                navigator.clipboard.writeText(text).then(function() { showToast('✅ 已复制 ' + list.length + ' 个书签'); });
+            } else {
+                var ta = document.createElement('textarea');
+                ta.value = text;
+                document.body.appendChild(ta);
+                ta.select();
+                document.execCommand('copy');
+                document.body.removeChild(ta);
+                showToast('✅ 已复制到剪贴板');
+            }
+            if (isBatchMode) exitBatchMode();
+            refreshLibraryView();
+        });
+
+        document.getElementById('libImportBtn').addEventListener('click', function() {
+            if (isBatchMode) exitBatchMode();
+            var fInput = document.createElement('input');
+            fInput.type = 'file';
+            fInput.accept = '.json,.html,.htm';
+            fInput.style.display = 'none';
+            document.body.appendChild(fInput);
+            fInput.click();
+            fInput.addEventListener('change', function() {
+                var file = this.files[0];
+                if (!file) return;
+                var r = new FileReader();
+                r.onload = function(ev) {
+                    var content = ev.target.result;
+                    var newItems = [];
+                    var isHtml = /\.html?$/i.test(file.name);
+                    if (isHtml) {
+                        var parser = new DOMParser();
+                        var doc = parser.parseFromString(content, 'text/html');
+                        doc.querySelectorAll('a').forEach(function(a) {
+                            var url = a.getAttribute('href');
+                            if (url && url.startsWith('http')) {
+                                newItems.push({ name: a.textContent.trim() || '未命名', icon: '🔗',
+                                    url: url });
+                            }
+                        });
+                    } else {
+                        try {
+                            var data = JSON.parse(content);
+                            if (Array.isArray(data)) {
+                                newItems = data.map(function(item) {
+                                    return { name: item.name || '未命名', icon: '🔗', url: item.url ||
+                                            '#' };
+                                });
+                            } else { showToast('❌ JSON 格式不支持'); return; }
+                        } catch (e) { showToast('❌ 文件解析失败'); return; }
+                    }
+                    if (newItems.length === 0) { showToast('⚠️ 未找到有效书签'); return; }
+                    var lib = getLibrary();
+                    var addedItems = [],
+                        added = 0;
+                    newItems.forEach(function(item) {
+                        if (!item.url || item.url === '#') return;
+                        var exists = lib.some(function(b) { return b.url === item.url; });
+                        if (!exists) { addedItems.push(item);
+                            added++; }
+                    });
+                    if (added > 0) {
+                        lib = addedItems.concat(lib);
+                        saveLibrary(lib);
+                        renderLibraryList('');
+                        showToast('✅ 成功导入 ' + added + ' 个书签');
+                    } else showToast('⚠️ 所有书签均已存在');
+                    refreshLibraryView();
+                };
+                r.readAsText(file);
+                this.value = '';
+            });
+        });
+
+        document.getElementById('libResetBtn').addEventListener('click', function() {
+            if (isBatchMode) exitBatchMode();
+            document.getElementById('resetOverlay').classList.add('active');
+        });
+
+        document.getElementById('resetCancelBtn').addEventListener('click', function() {
+            document.getElementById('resetOverlay').classList.remove('active');
+        });
+        document.getElementById('resetOverlay').addEventListener('click', function(e) {
+            if (e.target === this) this.classList.remove('active');
+        });
+        document.getElementById('resetHomeBtn').addEventListener('click', function() {
+            if (confirm('确定清空主页网格中的所有书签吗？')) {
+                shortcuts = [];
+                saveShortcuts();
+                renderShortcuts();
+                showToast('✅ 主页书签已重置');
+            }
+            document.getElementById('resetOverlay').classList.remove('active');
+        });
+        document.getElementById('resetLibraryBtn').addEventListener('click', function() {
+            if (confirm('确定清空书签库中的所有书签吗？')) {
+                saveLibrary([]);
+                renderLibraryList('');
+                showToast('✅ 书签库已重置');
+            }
+            document.getElementById('resetOverlay').classList.remove('active');
+        });
+        document.getElementById('resetAllBtn').addEventListener('click', function() {
+            if (confirm('确定同时清空主页网格和书签库吗？')) {
+                shortcuts = [];
+                saveShortcuts();
+                renderShortcuts();
+                saveLibrary([]);
+                renderLibraryList('');
+                showToast('✅ 全部已重置');
+            }
+            document.getElementById('resetOverlay').classList.remove('active');
+        });
+
+        document.getElementById('libAddAllBtn').addEventListener('click', function() {
+            if (isBatchMode) {
+                var checked = document.querySelectorAll('.lib-check:checked');
+                if (checked.length === 0) { showToast('⚠️ 请至少勾选一个书签'); return; }
+                var added = 0,
+                    lib = getLibrary();
+                checked.forEach(function(cb) {
+                    var idx = parseInt(cb.dataset.idx);
+                    if (idx >= 0 && idx < lib.length) {
+                        var item = lib[idx];
+                        if (!item.url) return;
+                        var exists = shortcuts.some(function(b) { return b.url === item.url; });
+                        if (!exists) {
+                            shortcuts.push({ name: item.name || '未命名', icon: (item.name || '网').charAt(0),
+                                url: item.url });
+                            added++;
+                        }
+                    }
+                });
+                if (added > 0) { saveShortcuts();
+                    renderShortcuts();
+                    showToast('✅ 已添加 ' + added + ' 个书签到网格'); } else showToast('⚠️ 所选书签均已存在');
+                refreshLibraryView();
+            } else {
+                var lib = getLibrary();
+                if (lib.length === 0) { showToast('书签库为空'); return; }
+                var added = 0;
+                lib.forEach(function(item) {
+                    if (!item.url) return;
+                    var exists = shortcuts.some(function(b) { return b.url === item.url; });
+                    if (!exists) {
+                        shortcuts.push({ name: item.name || '未命名', icon: (item.name || '网').charAt(0),
+                            url: item.url });
+                        added++;
+                    }
+                });
+                if (added > 0) { saveShortcuts();
+                    renderShortcuts();
+                    showToast('✅ 已添加 ' + added + ' 个书签到网格'); } else showToast('⚠️ 所有书签已在网格中');
+                refreshLibraryView();
+            }
+        });
+
+        // ===== 修改库书签 =====
+        var editModal = document.getElementById('editModal');
+        var editName = document.getElementById('editName');
+        var editUrl = document.getElementById('editUrl');
+        var editIdx = document.getElementById('editIdx');
+        document.getElementById('editCancel').addEventListener('click', function() { editModal.classList.remove('active'); });
+        editModal.addEventListener('click', function(e) { if (e.target === this) this.classList.remove('active'); });
+        document.getElementById('editSave').addEventListener('click', function() {
+            var idx = parseInt(editIdx.value);
+            var lib = getLibrary();
+            if (isNaN(idx) || idx < 0 || idx >= lib.length) return;
+            var name = editName.value.trim();
+            var url = autoCompleteUrl(editUrl.value.trim());
+            if (!name || !url) { showToast('⚠️ 标题和网址不能为空'); return; }
+            lib[idx].name = name;
+            lib[idx].url = url;
+            saveLibrary(lib);
+            renderLibraryList('');
+            editModal.classList.remove('active');
+            showToast('✅ 书签已修改');
+            refreshLibraryView();
+        });
+
+        // =============================================================
+        // ★ 主页自定义设置
+        // =============================================================
+        var textColor = localStorage.getItem('home_text_color') || '#999999';
+        var bgColor = localStorage.getItem('home_bg_color') || '#f5f5f5';
+        var bgImage = localStorage.getItem('home_bg_image') || '';
+        var searchStyle = localStorage.getItem('home_search_style') || 'round';
+        var layoutOffset = parseInt(localStorage.getItem('home_layout_offset') || '0', 10);
+        var clockSize = parseInt(localStorage.getItem('home_clock_size') || '56', 10);
+        var iconSize = parseInt(localStorage.getItem('home_icon_size') || '36', 10);
+        var clockVisible = localStorage.getItem('home_clock_visible') !== 'false';
+        // ★ FAB 可见性（默认显示）
+        var fabVisible = localStorage.getItem('home_fab_visible') !== 'false';
+
+        // ---- 时钟显隐 ----
+        function applyClockVisibility() {
+            var cs = document.getElementById('clockSection');
+            if (!cs) return;
+            if (clockVisible) cs.classList.remove('hidden');
+            else cs.classList.add('hidden');
+            document.getElementById('timeShowBtn').classList.toggle('primary', clockVisible);
+            document.getElementById('timeHideBtn').classList.toggle('primary', !clockVisible);
+        }
+
+        document.getElementById('timeShowBtn').addEventListener('click', function() {
+            clockVisible = true;
+            localStorage.setItem('home_clock_visible', 'true');
+            applyClockVisibility();
+        });
+        document.getElementById('timeHideBtn').addEventListener('click', function() {
+            clockVisible = false;
+            localStorage.setItem('home_clock_visible', 'false');
+            applyClockVisibility();
+        });
+
+        // ---- FAB 显隐 ----
+        function applyFabVisibility() {
+            var group = document.getElementById('fabGroup');
+            var pipe = document.getElementById('tinyPipeBtn');
+            if (!group || !pipe) return;
+            if (fabVisible) {
+                group.classList.remove('hidden');
+                pipe.classList.remove('show');
+            } else {
+                group.classList.add('hidden');
+                pipe.classList.add('show');
+            }
+            document.getElementById('fabShowBtn').classList.toggle('primary', fabVisible);
+            document.getElementById('fabHideBtn').classList.toggle('primary', !fabVisible);
+        }
+
+        document.getElementById('fabShowBtn').addEventListener('click', function() {
+            fabVisible = true;
+            localStorage.setItem('home_fab_visible', 'true');
+            applyFabVisibility();
+        });
+        document.getElementById('fabHideBtn').addEventListener('click', function() {
+            fabVisible = false;
+            localStorage.setItem('home_fab_visible', 'false');
+            applyFabVisibility();
+        });
+
+        document.getElementById('tinyPipeBtn').addEventListener('click', function() {
+            document.getElementById('settingsBtn').click();
+        });
+
+        // ---- 其他设置函数 ----
+        function applySearchStyle() {
+            var root = document.documentElement;
+            var input = document.getElementById('searchInput');
+            var btn = document.getElementById('engineBtn');
+            var clearBtn = document.getElementById('searchClear');
+            input.style.background = 'var(--card-bg)';
+            input.style.border = '2px solid var(--border)';
+            input.style.boxShadow = 'var(--shadow)';
+            input.style.backdropFilter = 'blur(10px)';
+            input.style.webkitBackdropFilter = 'blur(10px)';
+            input.style.borderImage = 'none';
+            input.style.textShadow = 'none';
+            input.style.color = '#fff';
+            btn.style.background = 'var(--border)';
+            btn.style.backdropFilter = 'blur(10px)';
+            btn.style.webkitBackdropFilter = 'blur(10px)';
+            btn.style.border = 'none';
+            btn.style.color = '#fff';
+            btn.style.textShadow = 'none';
+            clearBtn.style.color = 'rgba(255,255,255,0.6)';
+            clearBtn.style.textShadow = 'none';
+
+            switch (searchStyle) {
+                case 'square':
+                    root.style.setProperty('--search-radius', '8px');
+                    root.style.setProperty('--search-border-type', 'solid');
+                    break;
+                case 'wave':
+                    root.style.setProperty('--search-radius', '12px');
+                    root.style.setProperty('--search-border-type', 'solid');
+                    input.style.borderImage =
+                        'repeating-linear-gradient(45deg, var(--accent-color), var(--accent-color) 6px, transparent 6px, transparent 12px) 2';
+                    break;
+                case 'transparent':
+                    root.style.setProperty('--search-radius', '0px');
+                    root.style.setProperty('--search-border-type', 'solid');
+                    input.style.background = 'transparent';
+                    input.style.border = 'none';
+                    input.style.boxShadow = 'none';
+                    input.style.backdropFilter = 'none';
+                    input.style.webkitBackdropFilter = 'none';
+                    input.style.borderImage = 'none';
+                    input.style.color = 'rgba(255,255,255,0.9)';
+                    input.style.textShadow = '0 0 8px rgba(0,0,0,0.5)';
+                    btn.style.background = 'transparent';
+                    btn.style.backdropFilter = 'none';
+                    btn.style.webkitBackdropFilter = 'none';
+                    btn.style.color = 'rgba(255,255,255,0.7)';
+                    btn.style.textShadow = '0 0 8px rgba(0,0,0,0.5)';
+                    clearBtn.style.color = 'rgba(255,255,255,0.7)';
+                    clearBtn.style.textShadow = '0 0 8px rgba(0,0,0,0.5)';
+                    break;
+                default:
+                    root.style.setProperty('--search-radius', '28px');
+                    root.style.setProperty('--search-border-type', 'solid');
+                    break;
+            }
+        }
+
+        function applyAllSettings() {
+            document.body.style.background = bgColor;
+            document.documentElement.style.setProperty('--bg', bgColor);
+            document.documentElement.style.setProperty('--bookmark-text-color', textColor);
+            var bl = document.getElementById('bgLayer');
+            if (bgImage) {
+                bl.style.backgroundImage = (bgImage.startsWith('url(') ? bgImage : 'url(' + bgImage + ')');
+                bl.classList.add('visible');
+            } else bl.classList.remove('visible');
+            applySearchStyle();
+            document.querySelector('.container').style.marginTop = layoutOffset + 'px';
+            document.getElementById('time').style.fontSize = clockSize + 'px';
+            document.documentElement.style.setProperty('--icon-size', iconSize + 'px');
+            document.documentElement.style.setProperty('--text-size', '11px');
+            document.getElementById('footerText').textContent = '';
+            applyClockVisibility();
+            applyFabVisibility();
+        }
+
+        function loadSettingsUI() {
+            document.getElementById('textColorInput').value = textColor;
+            document.getElementById('bgColorInput').value = bgColor;
+            document.getElementById('searchStyleSelect').value = searchStyle;
+            document.getElementById('layoutRange').value = layoutOffset;
+            document.getElementById('layoutVal').textContent = layoutOffset + 'px';
+            document.getElementById('clockSizeRange').value = clockSize;
+            document.getElementById('clockSizeVal').textContent = clockSize + 'px';
+            document.getElementById('iconSizeRange').value = iconSize;
+            document.getElementById('iconSizeVal').textContent = iconSize + 'px';
+            renderEngineManagementList();
+            var iconBtn = document.getElementById('iconModeBtn');
+            var textBtn = document.getElementById('textModeBtn');
+            var listBtn = document.getElementById('listModeBtn');
+            iconBtn.classList.remove('primary');
+            textBtn.classList.remove('primary');
+            listBtn.classList.remove('primary');
+            if (viewMode === 'list') listBtn.classList.add('primary');
+            else if (iconDisplayMode === 'icon') iconBtn.classList.add('primary');
+            else textBtn.classList.add('primary');
+            document.getElementById('timeShowBtn').classList.toggle('primary', clockVisible);
+            document.getElementById('timeHideBtn').classList.toggle('primary', !clockVisible);
+            document.getElementById('fabShowBtn').classList.toggle('primary', fabVisible);
+            document.getElementById('fabHideBtn').classList.toggle('primary', !fabVisible);
+        }
+
+        // ---- 设置事件绑定 ----
+        document.getElementById('textColorInput').addEventListener('input', function() {
+            textColor = this.value;
+            localStorage.setItem('home_text_color', textColor);
+            applyAllSettings();
+        });
+        document.getElementById('resetTextColor').addEventListener('click', function() {
+            textColor = '#999999';
+            localStorage.setItem('home_text_color', textColor);
+            applyAllSettings();
+            loadSettingsUI();
+        });
+        document.getElementById('bgColorInput').addEventListener('input', function() {
+            bgColor = this.value;
+            localStorage.setItem('home_bg_color', bgColor);
+            applyAllSettings();
+        });
+        document.getElementById('resetBgColor').addEventListener('click', function() {
+            bgColor = '#f5f5f5';
+            localStorage.setItem('home_bg_color', bgColor);
+            applyAllSettings();
+            loadSettingsUI();
+        });
+        document.getElementById('searchStyleSelect').addEventListener('change', function() {
+            searchStyle = this.value;
+            localStorage.setItem('home_search_style', searchStyle);
+            applyAllSettings();
+        });
+        document.getElementById('layoutRange').addEventListener('input', function() {
+            layoutOffset = parseInt(this.value);
+            document.getElementById('layoutVal').textContent = layoutOffset + 'px';
+            localStorage.setItem('home_layout_offset', layoutOffset);
+            applyAllSettings();
+        });
+        document.getElementById('clockSizeRange').addEventListener('input', function() {
+            clockSize = parseInt(this.value);
+            document.getElementById('clockSizeVal').textContent = clockSize + 'px';
+            localStorage.setItem('home_clock_size', clockSize);
+            applyAllSettings();
+        });
+        document.getElementById('iconSizeRange').addEventListener('input', function() {
+            iconSize = parseInt(this.value);
+            document.getElementById('iconSizeVal').textContent = iconSize + 'px';
+            localStorage.setItem('home_icon_size', iconSize);
+            applyAllSettings();
+        });
+
+        document.getElementById('iconModeBtn').addEventListener('click', function() {
+            viewMode = 'grid';
+            localStorage.setItem('home_view_mode', 'grid');
+            iconDisplayMode = 'icon';
+            localStorage.setItem('home_icon_mode', 'icon');
+            loadSettingsUI();
+            renderShortcuts();
+        });
+        document.getElementById('textModeBtn').addEventListener('click', function() {
+            viewMode = 'grid';
+            localStorage.setItem('home_view_mode', 'grid');
+            iconDisplayMode = 'text';
+            localStorage.setItem('home_icon_mode', 'text');
+            loadSettingsUI();
+            renderShortcuts();
+        });
+        document.getElementById('listModeBtn').addEventListener('click', function() {
+            viewMode = 'list';
+            localStorage.setItem('home_view_mode', 'list');
+            loadSettingsUI();
+            renderShortcuts();
+        });
+
+        // ---- 背景图片 ----
+        var bf = document.getElementById('bgFileInput');
+        document.getElementById('bgUploadBtn').addEventListener('click', function() { bf.click(); });
+        bf.addEventListener('change', function() {
+            var f = this.files[0];
+            if (!f) return;
+            var r = new FileReader();
+            r.onload = function(e) {
+                var img = new Image();
+                img.onload = function() {
+                    var c = document.createElement('canvas'),
+                        w = img.width,
+                        h = img.height,
+                        mw = 800;
+                    if (w > mw) { h = h * mw / w;
+                        w = mw; }
+                    c.width = w;
+                    c.height = h;
+                    c.getContext('2d').drawImage(img, 0, 0, w, h);
+                    bgImage = c.toDataURL('image/jpeg', 0.7);
+                    localStorage.setItem('home_bg_image', bgImage);
+                    applyAllSettings();
+                    showToast('背景已设置');
+                };
+                img.src = e.target.result;
+            };
+            r.readAsDataURL(f);
+            this.value = '';
+        });
+        document.getElementById('bgUrlBtn').addEventListener('click', function() {
+            var u = prompt('请输入图片URL：');
+            if (u && u.trim()) {
+                bgImage = u.trim();
+                localStorage.setItem('home_bg_image', bgImage);
+                applyAllSettings();
+                showToast('背景已设置');
+            }
+        });
+        document.getElementById('bgClearBtn').addEventListener('click', function() {
+            bgImage = '';
+            localStorage.removeItem('home_bg_image');
+            applyAllSettings();
+            showToast('背景已清除');
+        });
+
+        // ---- Toast ----
+        var toastTimer;
+
+        function showToast(msg) {
+            var t = document.getElementById('toast');
+            t.textContent = msg;
+            t.classList.add('show');
+            clearTimeout(toastTimer);
+            toastTimer = setTimeout(function() { t.classList.remove('show'); }, 2500);
+        }
+
+        // ---- 书签搜索 ----
+        var searchOverlay = document.getElementById('searchOverlay');
+        var searchKeywordInput = document.getElementById('searchKeywordInput');
+        var searchClearBtn = document.getElementById('searchClearBtn');
+        var searchResultsContainer = document.getElementById('searchResultsContainer');
+        var searchCloseBtn = document.getElementById('searchCloseBtn');
+        var currentHighlightIndex = -1;
+
+        function removeAllHighlights() {
+            document.querySelectorAll('.search-highlight').forEach(function(el) { el.classList.remove('search-highlight'); });
+            currentHighlightIndex = -1;
+        }
+
+        function performSearch(keyword) {
+            if (!keyword) { searchResultsContainer.innerHTML = '<div class="search-empty">请输入关键字开始搜索</div>'; return; }
+            keyword = keyword.toLowerCase();
+            var results = [];
+            shortcuts.forEach(function(item, index) {
+                if ((item.name || '').toLowerCase().indexOf(keyword) !== -1 || (item.url || '').toLowerCase().indexOf(
+                        keyword) !== -1) {
+                    results.push({ type: 'home', data: item, index: index });
+                }
+            });
+            var library = getLibrary();
+            library.forEach(function(item, index) {
+                if ((item.name || '').toLowerCase().indexOf(keyword) !== -1 || (item.url || '').toLowerCase().indexOf(
+                        keyword) !== -1) {
+                    results.push({ type: 'library', data: item, index: index });
+                }
+            });
+            if (results.length === 0) {
+                searchResultsContainer.innerHTML = '<div class="search-empty">没有找到匹配的书签</div>';
+                return;
+            }
+            var html = '';
+            results.forEach(function(res) {
+                var sourceLabel = res.type === 'home' ? '[主页]' : '[书签库]';
+                var sourceColor = res.type === 'home' ? 'var(--accent-color)' : '#f0ad4e';
+                html += `<div class="search-result-item" data-type="${res.type}" data-index="${res.index}">
+                            <div style="display:flex;flex-direction:column;">
+                                <span class="sr-name"><span class="sr-source" style="border-color:${sourceColor}; color:${sourceColor};">${sourceLabel}</span>${truncateByChars(res.data.name, 30)}</span>
+                                <span class="sr-url">${truncateByChars(res.data.url, 40)}</span>
+                            </div>
+                        </div>`;
+            });
+            searchResultsContainer.innerHTML = html;
+            searchResultsContainer.querySelectorAll('.search-result-item').forEach(function(el) {
+                el.addEventListener('click', function() {
+                    var type = this.dataset.type;
+                    var idx = parseInt(this.dataset.index);
+                    closeSearch();
+                    removeAllHighlights();
+                    if (type === 'home' && idx >= 0 && idx < shortcuts.length) {
+                        var targetEl = document.querySelectorAll('.shortcut-item')[idx];
+                        if (targetEl) {
+                            var container = document.getElementById('pageScroll');
+                            smartScrollTo(targetEl, container, -80);
+                            targetEl.classList.add('search-highlight');
+                            currentHighlightIndex = idx;
+                        }
+                    } else if (type === 'library') {
+                        openLibrary();
+                        setTimeout(function() {
+                            var libCont = document.getElementById('libListContainer');
+                            var libRows = libCont.querySelectorAll('.lib-row');
+                            if (libRows && libRows.length > idx) {
+                                var targetLibRow = libRows[idx];
+                                smartScrollTo(targetLibRow, libCont, -80);
+                                targetLibRow.classList.add('search-highlight');
+                            }
+                        }, 500);
+                    }
+                });
+            });
+        }
+
+        function smartScrollTo(element, container, offsetY) {
+            if (!element || !container) return;
+            offsetY = offsetY || -80;
+            var containerHeight = container.clientHeight;
+            var elHeight = element.offsetHeight;
+            var targetScrollTop = element.offsetTop - (containerHeight / 2) + (elHeight / 2) + offsetY;
+            if (targetScrollTop < 0) targetScrollTop = 0;
+            if (targetScrollTop > container.scrollHeight - containerHeight) targetScrollTop = container.scrollHeight -
+                containerHeight;
+            container.scrollTo({ top: targetScrollTop, behavior: 'smooth' });
+        }
+
+        searchKeywordInput.addEventListener('input', function() {
+            var val = this.value.trim();
+            if (val) localStorage.setItem('home_search_query', val);
+            else localStorage.removeItem('home_search_query');
+            performSearch(val);
+        });
+        searchClearBtn.addEventListener('click', function() {
+            searchKeywordInput.value = '';
+            localStorage.removeItem('home_search_query');
+            searchResultsContainer.innerHTML = '<div class="search-empty">请输入关键字开始搜索</div>';
+            searchKeywordInput.focus();
+        });
+
+        function openSearch() {
+            searchOverlay.classList.add('active');
+            document.body.style.overflow = 'hidden';
+            var lastQuery = localStorage.getItem('home_search_query') || '';
+            searchKeywordInput.value = lastQuery;
+            if (lastQuery) performSearch(lastQuery);
+            else searchResultsContainer.innerHTML = '<div class="search-empty">请输入关键字开始搜索</div>';
+            setTimeout(function() { searchKeywordInput.focus(); }, 300);
+        }
+
+        function closeSearch() {
+            searchOverlay.classList.remove('active');
+            document.body.style.overflow = '';
+        }
+        document.getElementById('searchFab').addEventListener('click', openSearch);
+        searchCloseBtn.addEventListener('click', closeSearch);
+        searchOverlay.addEventListener('click', function(e) { if (e.target === this) closeSearch(); });
+
+        document.addEventListener('click', function(e) {
+            if (currentHighlightIndex === -1) return;
+            if (e.target.closest('.search-overlay') || e.target.closest('.search-result-item')) return;
+            removeAllHighlights();
+        });
+
+        // ===== 初始化 =====
+        applyAllSettings();
+        renderShortcuts();
+        renderLibraryList(''); // 初始显示全部
+    </script>
+</body>
+</html>
