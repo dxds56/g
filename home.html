@@ -1511,7 +1511,7 @@
                             <div class="date" id="date"><br><br></div>
             
             <div class="search-wrapper" id="searchWrapper">
-                <button class="search-engine-btn" id="engineBtn">必应</button>
+                <button class="search-engine-btn" id="engineBtn">2</button>
                 <input type="text" class="search-box" id="searchInput" placeholder="" autocomplete="off" enterkeyhint="search">
                 <button class="search-clear" id="searchClear" title="清除">✕</button>
                 <div class="engine-dropdown" id="engineDropdown"></div>
@@ -1748,7 +1748,7 @@
         var suppressClick = false;
         var isDeletingMode = false;
 
-        const PRESET_ICONS = ['📘', '📗', '📙', '📔', '💻', '📱', '🎮', '🎯', '💡', '📌', '🎵', '🎶', '🎨', '🌈', '🚀', '⭐', '🌙', '🌊', '🍕', '🍔', '🌮', '🍜', '🍣', '🥤'];
+        const PRESET_ICONS = ['👤', '🔥', '💹', '📘', '📗', '📙', '📔', '💻', '📱', '🎮', '🎯', '💡', '📌', '🎵', '🎶', '🎨', '🌈', '🚀', '⭐', '🌙', '🌊', '🍕', '🍔', '🌮', '🍜', '🍣', '🥤'];
 
         function loadShortcuts() {
             try {
@@ -1773,7 +1773,7 @@
 
         // ===== 搜索引擎管理 =====
         var defaultEngines = [
-            { name: '必应', url: 'https://www.bing.com/search?q=' },
+            { name: ' ', url: 'https://www.bing.com/search?q=' },
             { name: '谷歌', url: 'https://www.google.com/search?q=' },
             { name: 'duck', url: 'https://noai.duckduckgo.com/?q=' },
             { name: '搜狗', url: 'https://www.sogou.com/web?query=' }
@@ -1803,7 +1803,7 @@
                 var se = localStorage.getItem('home_engine');
                 if (se) { var p = JSON.parse(se); return p; }
             } catch (e) {}
-            return activeEngines[0] || { name: '必应', url: 'https://www.bing.com/search?q=' };
+            return activeEngines[0] || { name: '3', url: 'https://www.bing.com/search?q=' };
         }
         function saveCurEngine() { try { localStorage.setItem('home_engine', JSON.stringify(curEng)); } catch (e) {} }
 
@@ -1881,7 +1881,7 @@
                 hiddenEngines = [];
                 saveHiddenEngines();
                 activeEngines = getActiveEngines();
-                curEng = activeEngines[0] || { name: '必应', url: 'https://www.bing.com/search?q=' };
+                curEng = activeEngines[0] || { name: '4', url: 'https://www.bing.com/search?q=' };
                 saveCurEngine();
                 renderEngineDropdown();
                 updateEngineBtn();
